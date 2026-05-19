@@ -210,6 +210,9 @@ jobs:
           gcloud run deploy dp-proj-00-03-cms \
             --region="${{ secrets.GCP_REGION }}" \
             --image="${{ steps.image.outputs.uri }}" \
+            --port=3000 \
+            --cpu-boost \
+            --timeout=300 \
             --env-vars-file=/tmp/cloudrun-env.yaml \
             --update-labels=managed-by=github-actions,commit-sha=${{ github.sha }} \
             --quiet

@@ -106,14 +106,33 @@ export default buildConfig({
     adminImportMenusEndpoint,
     ...v1ApiEndpoints,
     {
-      path: '/health',
+      path: '/health/ready',
       method: 'get',
-      handler: async () => {
-        return Response.json({
-          status: 'ok',
-          timestamp: new Date().toISOString(),
-          component: 'cms',
-        })
+      handler: async ({ req }) => {
+        try {
+          await req.payload.find({
+            collection: 'tenants',
+            limit: 1,
+            depth: 0,
+            overrideAccess: true,
+          })
+          return Response.json({
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            component: 'cms',
+            database: 'connected',
+          })
+        } catch (error) {
+          return Response.json(
+            {
+              status: 'error',
+              component: 'cms',
+              database: 'disconnected',
+              message: error instanceof Error ? error.message : String(error),
+            },
+            { status: 503 },
+          )
+        }
       },
     },
     {
