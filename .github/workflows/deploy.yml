@@ -182,8 +182,7 @@ jobs:
           # Sin indentación en el YAML (heredoc indentado rompe las claves)
           {
             echo 'NODE_ENV: production'
-            echo 'PORT: "3000"'
-            echo 'HOSTNAME: "0.0.0.0"'
+            # PORT lo fija Cloud Run (--port=3000); no incluirlo en env-vars-file
             echo "DATABASE_URL: \"${DATABASE_URL}\""
             echo "PAYLOAD_SECRET: \"${PAYLOAD_SECRET}\""
             echo "PAYLOAD_PUBLIC_SERVER_URL: \"${PAYLOAD_PUBLIC_SERVER_URL}\""
