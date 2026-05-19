@@ -187,18 +187,33 @@ jobs:
           echo "uri=$IMAGE" >> "$GITHUB_OUTPUT"
           echo "Deploying: $IMAGE"
 
+      - name: Reset conflicting env vars (Secret Manager → GitHub literals)
+        run: |
+          # La acción deploy-cloudrun pierde el '=' en --remove-secrets; además no puede mezclarse con --env-vars-file.
+          ENV_KEYS="DATABASE_URL,PAYLOAD_SECRET,RESEND_API_KEY,TURNSTILE_SECRET_KEY,FRONTEND_WEBHOOK_SECRET"
+          REGION="${{ secrets.GCP_REGION }}"
+          gcloud run services update dp-proj-00-03-cms \
+            --region="$REGION" \
+            --remove-secrets="$ENV_KEYS" \
+            --quiet || true
+          gcloud run services update dp-proj-00-03-cms \
+            --region="$REGION" \
+            --clear-env-vars="$ENV_KEYS" \
+            --quiet
+
       - name: Deploy to Cloud Run
         id: deploy
-        uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: dp-proj-00-03-cms
-          region: ${{ secrets.GCP_REGION }}
-          image: ${{ steps.image.outputs.uri }}
-          # Si el servicio se creó con Secret Manager (Terraform/manual), hay que quitar el
-          # binding antes de inyectar literales desde GitHub (SECRETS.md).
-          flags: >-
-            --remove-secrets=DATABASE_URL,PAYLOAD_SECRET,RESEND_API_KEY,TURNSTILE_SECRET_KEY,FRONTEND_WEBHOOK_SECRET
-            --env-vars-file=/tmp/cloudrun-env.yaml
+        run: |
+          gcloud run deploy dp-proj-00-03-cms \
+            --region="${{ secrets.GCP_REGION }}" \
+            --image="${{ steps.image.outputs.uri }}" \
+            --env-vars-file=/tmp/cloudrun-env.yaml \
+            --update-labels=managed-by=github-actions,commit-sha=${{ github.sha }} \
+            --quiet
+          URL=$(gcloud run services describe dp-proj-00-03-cms \
+            --region="${{ secrets.GCP_REGION }}" \
+            --format='value(status.url)')
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
 
       - name: Health check post-deploy
         id: health
