@@ -1,0 +1,964 @@
+openapi: 3.0.3
+info:
+  title: dp-proj-00-03 CMS API
+  version: "1"
+  description: |
+    API REST del CMS Payload multi-tenant para la plataforma dp-proj-00-03.
+
+    ## Autenticación
+    - Endpoints de escritura requieren header `Authorization: Bearer <token>`
+    - Endpoints de lectura pública no requieren autenticación
+    - Tokens JWT externos de proveedores registrados son aceptados
+
+    ## Rate Limiting
+    - 100 peticiones por minuto por cliente autenticado (429 si se supera)
+
+    ## Contratos
+    - Versión: v1
+    - Protocolo: HTTP REST / JSON
+
+servers:
+  - url: https://dp-proj-00-03-cms-{hash}.run.app/api
+    description: Producción (Cloud Run)
+  - url: http://localhost:3000/api
+    description: Desarrollo local
+
+tags:
+  - name: Tenants
+    description: Gestión de tenants (solo platform_admin)
+  - name: Domains
+    description: Dominios personalizados por tenant
+  - name: Pages
+    description: Páginas estáticas y landing pages
+  - name: Posts
+    description: Entradas de blog
+  - name: Menus
+    description: Menús de navegación
+  - name: Media
+    description: Archivos multimedia
+  - name: ContactForms
+    description: Formularios de contacto (público)
+  - name: Health
+    description: Health checks del sistema
+  - name: PublicTemplates
+    description: Plantillas HTML públicas (solo lectura)
+  - name: ApiV1
+    description: API SaaS con JWT externo (integración programática)
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check del CMS
+      description: Retorna el estado operativo del CMS. Responde en <= 5 segundos (Req 13.5).
+      security: []
+      responses:
+        "200":
+          description: Servicio disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        "503":
+          description: Servicio no disponible
+
+  /tenants:
+    get:
+      tags: [Tenants]
+      summary: Listar tenants
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        "200":
+          description: Lista de tenants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantList'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Tenants]
+      summary: Crear tenant
+      description: Crea un nuevo tenant. Completa el onboarding en <= 5 minutos (Req 1.5).
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTenantRequest'
+      responses:
+        "201":
+          description: Tenant creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+        "400":
+          $ref: '#/components/responses/ValidationError'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "409":
+          $ref: '#/components/responses/Conflict'
+
+  /tenants/{id}:
+    get:
+      tags: [Tenants]
+      summary: Obtener tenant por ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: Tenant encontrado
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Tenants]
+      summary: Actualizar tenant
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTenantRequest'
+      responses:
+        "200":
+          description: Tenant actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+        "400":
+          $ref: '#/components/responses/ValidationError'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /domains:
+    get:
+      tags: [Domains]
+      summary: Listar dominios del tenant
+      security: []
+      parameters:
+        - name: where[hostname][equals]
+          in: query
+          schema: { type: string }
+          description: Filtrar por hostname (para resolución de tenant)
+        - name: where[status][equals]
+          in: query
+          schema:
+            type: string
+            enum: [pending, verified, active, failed, cancelled]
+      responses:
+        "200":
+          description: Lista de dominios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainList'
+
+    post:
+      tags: [Domains]
+      summary: Registrar dominio personalizado
+      description: |
+        Registra un dominio y genera el token de verificación DNS TXT.
+        El tenant tiene 72h para verificar la propiedad (Req 2.7).
+        Máximo 10 dominios por tenant (Req 2.5).
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDomainRequest'
+      responses:
+        "201":
+          description: Dominio registrado (pendiente de verificación)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Domain'
+        "400":
+          $ref: '#/components/responses/ValidationError'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "409":
+          $ref: '#/components/responses/Conflict'
+
+  /domains/{id}:
+    delete:
+      tags: [Domains]
+      summary: Eliminar dominio
+      description: Elimina un dominio. Deja de servirse en <= 10 minutos (Req 2.4).
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Dominio eliminado
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /pages:
+    get:
+      tags: [Pages]
+      summary: Listar páginas del tenant
+      description: Retorna páginas publicadas (sin autenticación) o todas (con autenticación).
+      security: []
+      parameters:
+        - name: where[tenant][equals]
+          in: query
+          required: true
+          schema: { type: string }
+        - name: where[status][equals]
+          in: query
+          schema:
+            type: string
+            enum: [draft, scheduled, published]
+        - name: where[slug][equals]
+          in: query
+          schema: { type: string }
+        - name: depth
+          in: query
+          schema: { type: integer, default: 1 }
+      responses:
+        "200":
+          description: Lista de páginas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageList'
+
+    post:
+      tags: [Pages]
+      summary: Crear página
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePageRequest'
+      responses:
+        "201":
+          description: Página creada (estado inicial: draft)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page'
+        "400":
+          $ref: '#/components/responses/ValidationError'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+
+  /posts:
+    get:
+      tags: [Posts]
+      summary: Listar posts del tenant
+      security: []
+      parameters:
+        - name: where[tenant][equals]
+          in: query
+          required: true
+          schema: { type: string }
+        - name: where[status][equals]
+          in: query
+          schema:
+            type: string
+            enum: [draft, scheduled, published]
+        - name: sort
+          in: query
+          schema: { type: string, example: "-publishDate" }
+      responses:
+        "200":
+          description: Lista de posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostList'
+
+  /menus:
+    get:
+      tags: [Menus]
+      summary: Listar menús del tenant
+      security: []
+      parameters:
+        - name: where[tenant][equals]
+          in: query
+          required: true
+          schema: { type: string }
+        - name: where[location][equals]
+          in: query
+          schema: { type: string }
+        - name: depth
+          in: query
+          schema: { type: integer, default: 3 }
+      responses:
+        "200":
+          description: Lista de menús
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuList'
+
+  /contact-submissions:
+    post:
+      tags: [ContactForms]
+      summary: Enviar formulario de contacto
+      description: |
+        Endpoint público para envío de formularios de contacto.
+        Protegido por Cloudflare Turnstile CAPTCHA (Req 8.5).
+        Notifica al tenant en <= 5 minutos (Req 8.2).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactFormRequest'
+      responses:
+        "201":
+          description: Formulario recibido y almacenado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactFormResponse'
+        "400":
+          $ref: '#/components/responses/ValidationError'
+        "429":
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /public/templates/{tenantId}/{templateId}:
+    get:
+      tags: [PublicTemplates]
+      summary: Obtener plantilla HTML activa
+      security: []
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: templateId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: HTML de index.html y baseUrl de assets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateBundle'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /v1/tenants:
+    get:
+      tags: [ApiV1]
+      summary: Listar tenants accesibles
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Lista de tenants
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "429":
+          $ref: '#/components/responses/RateLimitExceeded'
+    post:
+      tags: [ApiV1]
+      summary: Crear tenant (platform_admin)
+      security:
+        - BearerAuth: []
+      responses:
+        "201":
+          description: Tenant creado
+        "403":
+          $ref: '#/components/responses/Forbidden'
+
+  /v1/tenants/{tenantId}/pages:
+    get:
+      tags: [ApiV1]
+      summary: Listar páginas del tenant
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Páginas del tenant
+        "403":
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [ApiV1]
+      summary: Crear página en el tenant
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: Página creada
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    TemplateBundle:
+      type: object
+      required: [html, baseUrl, templateId, tenantId]
+      properties:
+        html:
+          type: string
+        baseUrl:
+          type: string
+          format: uri
+        templateId:
+          type: string
+        tenantId:
+          type: string
+
+    HealthStatus:
+      type: object
+      required: [status, timestamp, component]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, unavailable]
+        timestamp:
+          type: string
+          format: date-time
+        component:
+          type: string
+          example: cms
+
+    Tenant:
+      type: object
+      required: [id, name, defaultLanguage, timezone, isActive, settings, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        defaultLanguage:
+          type: string
+          example: es
+        timezone:
+          type: string
+          example: America/Mexico_City
+        isActive:
+          type: boolean
+        settings:
+          $ref: '#/components/schemas/TenantSettings'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TenantSettings:
+      type: object
+      properties:
+        contactEmail:
+          type: string
+          format: email
+        maxStorageBytes:
+          type: integer
+          example: 5368709120
+        currentStorageBytes:
+          type: integer
+        captchaEnabled:
+          type: boolean
+
+    CreateTenantRequest:
+      type: object
+      required: [name, settings]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        defaultLanguage:
+          type: string
+          default: es
+        timezone:
+          type: string
+          default: UTC
+        settings:
+          type: object
+          required: [contactEmail]
+          properties:
+            contactEmail:
+              type: string
+              format: email
+            captchaEnabled:
+              type: boolean
+              default: true
+
+    UpdateTenantRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        defaultLanguage:
+          type: string
+        timezone:
+          type: string
+        isActive:
+          type: boolean
+        settings:
+          $ref: '#/components/schemas/TenantSettings'
+
+    TenantList:
+      type: object
+      properties:
+        docs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tenant'
+        totalDocs:
+          type: integer
+        totalPages:
+          type: integer
+        page:
+          type: integer
+
+    Domain:
+      type: object
+      required: [id, hostname, status, verificationToken, verificationDeadline, sslProvisioned, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        hostname:
+          type: string
+          example: www.mi-empresa.com
+        status:
+          type: string
+          enum: [pending, verified, active, failed, cancelled]
+        verificationToken:
+          type: string
+          description: Registro DNS TXT a crear para verificar propiedad
+        verificationDeadline:
+          type: string
+          format: date-time
+        sslProvisioned:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    DomainList:
+      type: object
+      properties:
+        docs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Domain'
+        totalDocs:
+          type: integer
+
+    CreateDomainRequest:
+      type: object
+      required: [hostname, tenant]
+      properties:
+        hostname:
+          type: string
+          description: Hostname válido según RFC 1123
+          example: www.mi-empresa.com
+        tenant:
+          type: string
+          format: uuid
+
+    SEOConfig:
+      type: object
+      properties:
+        metaTitle:
+          type: string
+          maxLength: 70
+          nullable: true
+        metaDescription:
+          type: string
+          maxLength: 160
+          nullable: true
+        canonicalUrl:
+          type: string
+          nullable: true
+        ogImage:
+          type: string
+          nullable: true
+
+    PageTranslation:
+      type: object
+      required: [languageCode, title]
+      properties:
+        id:
+          type: string
+        languageCode:
+          type: string
+          example: es
+        title:
+          type: string
+        content:
+          type: string
+          description: HTML/Rich text del contenido
+        metaTitle:
+          type: string
+          maxLength: 70
+          nullable: true
+        metaDescription:
+          type: string
+          maxLength: 160
+          nullable: true
+        canonicalUrl:
+          type: string
+          nullable: true
+
+    Page:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        status:
+          type: string
+          enum: [draft, scheduled, published]
+        pageType:
+          type: string
+          enum: [static, landing]
+        publishDate:
+          type: string
+          format: date-time
+          nullable: true
+        scheduledDate:
+          type: string
+          format: date-time
+          nullable: true
+        hasSchemaOrg:
+          type: boolean
+        seoConfig:
+          $ref: '#/components/schemas/SEOConfig'
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PageTranslation'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PageList:
+      type: object
+      properties:
+        docs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Page'
+        totalDocs:
+          type: integer
+
+    CreatePageRequest:
+      type: object
+      required: [slug, tenant, translations]
+      properties:
+        slug:
+          type: string
+        tenant:
+          type: string
+          format: uuid
+        pageType:
+          type: string
+          enum: [static, landing]
+          default: static
+        scheduledDate:
+          type: string
+          format: date-time
+          description: Debe ser una fecha futura (Req 4.6)
+        seoConfig:
+          $ref: '#/components/schemas/SEOConfig'
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PageTranslation'
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+        slug:
+          type: string
+        status:
+          type: string
+          enum: [draft, scheduled, published]
+        publishDate:
+          type: string
+          format: date-time
+          nullable: true
+        scheduledDate:
+          type: string
+          format: date-time
+          nullable: true
+        seoConfig:
+          $ref: '#/components/schemas/SEOConfig'
+        translations:
+          type: array
+          items:
+            type: object
+            properties:
+              languageCode: { type: string }
+              title: { type: string }
+              content: { type: string }
+              excerpt: { type: string }
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PostList:
+      type: object
+      properties:
+        docs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Post'
+        totalDocs:
+          type: integer
+
+    MenuList:
+      type: object
+      properties:
+        docs:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+              location: { type: string }
+              items:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MenuItem'
+        totalDocs:
+          type: integer
+
+    MenuItem:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string }
+        url: { type: string }
+        sortOrder: { type: integer }
+        depth:
+          type: integer
+          minimum: 1
+          maximum: 3
+          description: Máximo 3 niveles de anidamiento (Req 3.3)
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuItem'
+
+    ContactFormRequest:
+      type: object
+      required: [name, email, message, tenant]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: RFC 5322 válido
+        message:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        tenant:
+          type: string
+          format: uuid
+        cf-turnstile-response:
+          type: string
+          description: Token de Cloudflare Turnstile CAPTCHA
+
+    ContactFormResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        submittedAt:
+          type: string
+          format: date-time
+        message:
+          type: string
+          example: "Tu mensaje ha sido recibido. Te contactaremos pronto."
+
+    ValidationErrorDetail:
+      type: object
+      required: [field, type, message]
+      properties:
+        field:
+          type: string
+        type:
+          type: string
+          enum: [required, format, length_exceeded, duplicate, invalid]
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationErrorDetail'
+
+  responses:
+    Unauthorized:
+      description: No autenticado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: No autenticado
+            code: UNAUTHENTICATED
+
+    Forbidden:
+      description: Permisos insuficientes
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Permisos insuficientes
+            code: FORBIDDEN
+
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: No encontrado
+            code: NOT_FOUND
+
+    Conflict:
+      description: Conflicto — recurso duplicado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    ValidationError:
+      description: Error de validación de entrada
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    RateLimitExceeded:
+      description: Límite de peticiones excedido (100/min)
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Segundos hasta poder reintentar
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Límite de peticiones excedido
+            code: RATE_LIMIT_EXCEEDED
+            retryAfter: 60

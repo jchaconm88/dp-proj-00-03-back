@@ -1,0 +1,155 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev
+  IMAGE_NAME: ${{ secrets.GCP_PROJECT_ID }}/dp-proj-00-03-cms/cms
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run property tests
+        run: pnpm test:properties
+
+      - name: Run unit tests
+        run: pnpm test:unit
+        continue-on-error: true
+
+      - name: Integration tests
+        run: pnpm test:integration
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+  build-and-push:
+    name: Build & Push Docker image
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    outputs:
+      image: ${{ steps.meta.outputs.tags }}
+      previous_image: ${{ steps.current_revision.outputs.image }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGISTRY }}
+
+      - name: Get current Cloud Run revision (for rollback)
+        id: current_revision
+        run: |
+          image=$(gcloud run services describe dp-proj-00-03-cms \
+            --region=${{ secrets.GCP_REGION }} \
+            --format='value(spec.template.spec.containers[0].image)' \
+            2>/dev/null || echo "")
+          echo "image=$image" >> $GITHUB_OUTPUT
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Cloud Run
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+
+    steps:
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: dp-proj-00-03-cms
+          region: ${{ secrets.GCP_REGION }}
+          image: ${{ needs.build-and-push.outputs.image }}
+
+      - name: Health check post-deploy
+        id: health
+        run: |
+          URL="${{ steps.deploy.outputs.url }}/api/health"
+          for i in $(seq 1 12); do
+            status=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            if [ "$status" = "200" ]; then
+              echo "Health check OK"
+              exit 0
+            fi
+            echo "Intento $i: status $status, esperando..."
+            sleep 5
+          done
+          echo "Health check fallido después de 60s"
+          exit 1
+
+      - name: Rollback on failure
+        if: failure() && steps.health.outcome == 'failure'
+        run: |
+          PREV_IMAGE="${{ needs.build-and-push.outputs.previous_image }}"
+          if [ -n "$PREV_IMAGE" ]; then
+            echo "Rollback a imagen anterior: $PREV_IMAGE"
+            gcloud run services update dp-proj-00-03-cms \
+              --region=${{ secrets.GCP_REGION }} \
+              --image="$PREV_IMAGE" \
+              --quiet
+          else
+            echo "No hay imagen anterior para rollback"
+            exit 1
+          fi
+        timeout-minutes: 5

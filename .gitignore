@@ -1,0 +1,27 @@
+node_modules/
+dist/
+.next/
+.payload/
+coverage/
+*.env
+*.env.*
+!.env.example
+!.env.local.example
+
+# Payload generated files (commit only the schema)
+src/payload-types.ts
+
+# Build artifacts
+*.tsbuildinfo
+
+# Plantillas HTML extraídas (local dev)
+storage/templates/
+/tmp/template-uploads/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
