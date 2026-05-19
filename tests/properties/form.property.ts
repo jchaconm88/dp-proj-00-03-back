@@ -65,9 +65,13 @@ describe('Feature: multi-tenant-web-platform, Property 22: Validación de Formul
     fc.assert(
       fc.property(
         fc.record({
-          name: fc.string({ minLength: 101, maxLength: 200 }),
+          name: fc
+            .string({ minLength: 101, maxLength: 200 })
+            .filter((s) => s.trim().length > 100),
           email: validEmail,
-          message: fc.string({ minLength: 1, maxLength: 100 }),
+          message: fc
+            .string({ minLength: 1, maxLength: 100 })
+            .filter((s) => s.trim().length > 0),
         }),
         (form) => {
           const result = validateContactForm(form)
