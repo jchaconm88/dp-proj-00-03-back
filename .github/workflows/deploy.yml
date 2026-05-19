@@ -105,7 +105,8 @@ jobs:
     timeout-minutes: 15
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     outputs:
-      # No pasar la URI completa: GitHub enmascara outputs que contienen secretos (PROJECT_ID/REGION)
+      # Digest no contiene secretos (a diferencia de la URI con PROJECT_ID/REGION)
+      digest: ${{ steps.build.outputs.digest }}
       previous_image: ${{ steps.current_revision.outputs.image }}
 
     steps:
@@ -137,10 +138,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix=sha-
+            type=sha,prefix=sha-,format=long
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -183,7 +185,8 @@ jobs:
       - name: Resolve container image
         id: image
         run: |
-          IMAGE="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dp-proj-00-03-cms/cms:sha-${{ github.sha }}"
+          # Referencia por digest (la del build-and-push); evita desajuste sha corto vs completo en tags
+          IMAGE="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/dp-proj-00-03-cms/cms@${{ needs.build-and-push.outputs.digest }}"
           echo "uri=$IMAGE" >> "$GITHUB_OUTPUT"
           echo "Deploying: $IMAGE"
 
