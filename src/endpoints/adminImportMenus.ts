@@ -1,4 +1,4 @@
-import type { Endpoint } from 'payload'
+import type { Endpoint, PayloadRequest } from 'payload'
 import { parseMenusSeed, upsertMenusForTenant } from '../services/template-menus-import.ts'
 
 const EDITOR_ROLES = ['platform_admin', 'tenant_admin', 'editor'] as const
@@ -6,7 +6,7 @@ const EDITOR_ROLES = ['platform_admin', 'tenant_admin', 'editor'] as const
 export const adminImportMenusEndpoint: Endpoint = {
   path: '/admin/import-menus',
   method: 'post',
-  handler: async (req) => {
+  handler: async (req: PayloadRequest) => {
     if (!req.user) {
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
@@ -16,6 +16,9 @@ export const adminImportMenusEndpoint: Endpoint = {
 
     let body: unknown
     try {
+      if (!req.json) {
+        return Response.json({ error: 'JSON no soportado' }, { status: 400 })
+      }
       body = await req.json()
     } catch {
       return Response.json({ error: 'JSON inválido' }, { status: 400 })

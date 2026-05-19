@@ -26,6 +26,11 @@ type Manifest = {
   blocks: Record<string, BlockDef>
 }
 
+type AdminFormFields = {
+  templateId?: { value?: unknown }
+  tenant?: { value?: unknown }
+}
+
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '8px 10px',
@@ -274,8 +279,10 @@ export const TemplateDataField: JSONFieldClientComponent = ({ field, path }) => 
   const { value, setValue } = useField<Record<string, Record<string, unknown>> | null>({
     path,
   })
-  const templateId = useFormFields(([fields]) => fields.templateId?.value as string | undefined)
-  const tenant = useFormFields(([fields]) => fields.tenant?.value)
+  const templateId = useFormFields(
+    ([fields]: [AdminFormFields]) => fields.templateId?.value as string | undefined,
+  )
+  const tenant = useFormFields(([fields]: [AdminFormFields]) => fields.tenant?.value)
 
   const [manifest, setManifest] = useState<Manifest | null>(null)
   const [loading, setLoading] = useState(false)

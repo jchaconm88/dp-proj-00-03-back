@@ -1,4 +1,8 @@
-import type { CollectionConfig, CollectionAfterChangeHook } from 'payload'
+import type {
+  CollectionConfig,
+  CollectionAfterChangeHook,
+  CollectionAfterDeleteHook,
+} from 'payload'
 import { notifyContentChange } from '../services/webhook.ts'
 
 const PRODUCT_CATEGORIES = [
@@ -18,6 +22,16 @@ const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation })
 
   await notifyContentChange({
     event,
+    tenantId: doc['tenant'] as string,
+    collection: 'products',
+    documentId: doc['id'] as string,
+    timestamp: new Date().toISOString(),
+  })
+}
+
+const afterDeleteWebhook: CollectionAfterDeleteHook = async ({ doc }) => {
+  await notifyContentChange({
+    event: 'content.updated',
     tenantId: doc['tenant'] as string,
     collection: 'products',
     documentId: doc['id'] as string,
@@ -49,7 +63,7 @@ export const Products: CollectionConfig = {
   },
   hooks: {
     afterChange: [afterChangeWebhook],
-    afterDelete: [afterChangeWebhook],
+    afterDelete: [afterDeleteWebhook],
   },
   fields: [
     {

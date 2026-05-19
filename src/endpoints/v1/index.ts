@@ -7,6 +7,9 @@ import {
 } from './auth.ts'
 
 function parseBody<T>(req: PayloadRequest): Promise<T> {
+  if (!req.json) {
+    return Promise.reject(new Error('JSON parser no disponible'))
+  }
   return req.json() as Promise<T>
 }
 

@@ -26,7 +26,7 @@ function useGcs(): boolean {
 
 let gcsInitialized = false
 
-function getGcsBucket(): admin.storage.Bucket | null {
+function getGcsBucket(): ReturnType<ReturnType<typeof admin.storage>['bucket']> | null {
   if (!BUCKET_NAME) return null
   if (!gcsInitialized) {
     if (!admin.apps.length) {
@@ -216,7 +216,11 @@ export async function deleteBundle(tenantId: string, templateId: string): Promis
     if (!bucket) return
     const prefix = `${templatePrefix(tenantId, templateId)}/`
     const [files] = await bucket.getFiles({ prefix })
-    await Promise.all(files.map((f) => f.delete().catch(() => undefined)))
+    await Promise.all(
+      files.map((file: { delete: () => Promise<unknown> }) =>
+        file.delete().catch(() => undefined),
+      ),
+    )
     return
   }
 

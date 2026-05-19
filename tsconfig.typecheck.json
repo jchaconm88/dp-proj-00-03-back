@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/collections/**/*.ts",
+    "src/endpoints/**/*.ts",
+    "src/services/**/*.ts",
+    "src/validators/**/*.ts",
+    "src/middleware/**/*.ts",
+    "src/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "tests"]
+}

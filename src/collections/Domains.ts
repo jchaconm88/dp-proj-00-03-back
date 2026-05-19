@@ -112,7 +112,7 @@ export const Domains: CollectionConfig = {
           })
         }
 
-        if (doc['status'] === 'active' || doc['status'] === 'failed' || operation === 'delete') {
+        if (doc['status'] === 'active' || doc['status'] === 'failed') {
           // Notificar al frontend para actualizar cache de resolucion de dominios
           const { notifyFrontendDomainChange } = await import('../services/webhook.ts')
           await notifyFrontendDomainChange(doc['hostname'] as string)
@@ -126,6 +126,8 @@ export const Domains: CollectionConfig = {
           domain: doc['hostname'],
           tenantId: doc['tenant'],
         })
+        const { notifyFrontendDomainChange } = await import('../services/webhook.ts')
+        await notifyFrontendDomainChange(doc['hostname'] as string)
       },
     ],
   },
