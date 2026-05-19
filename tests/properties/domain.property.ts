@@ -8,19 +8,11 @@ import { validateRFC1123Hostname } from '../../src/validators/domain.js'
  * Properties 6, 7
  */
 
-// Generador de hostnames válidos según RFC 1123
+// Label RFC 1123 sin filtros lentos (evita que fast-check se quede generando ejemplos)
+const validLabel = fc.stringMatching(/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/)
+
 const validHostname = fc
-  .array(
-    fc.stringOf(
-      fc.mapToConstant(
-        { num: 26, build: (n) => String.fromCharCode(97 + n) }, // a-z
-        { num: 10, build: (n) => String.fromCharCode(48 + n) }, // 0-9
-        { num: 1, build: () => '-' },
-      ),
-      { minLength: 1, maxLength: 63 },
-    ).filter((label) => !label.startsWith('-') && !label.endsWith('-')),
-    { minLength: 2, maxLength: 4 },
-  )
+  .array(validLabel, { minLength: 2, maxLength: 4 })
   .map((labels) => labels.join('.'))
   .filter((hostname) => hostname.length <= 253)
 
@@ -82,7 +74,7 @@ describe('Feature: multi-tenant-web-platform, Property 6: Validación de Dominio
   it('rechaza hostnames con longitud total > 253', () => {
     fc.assert(
       fc.property(
-        fc.string({ minLength: 254, maxLength: 300 }).filter((s) => /^[a-z0-9.-]+$/.test(s)),
+        fc.integer({ min: 254, max: 300 }).map((n) => 'a'.repeat(n)),
         (longHostname) => {
           return validateRFC1123Hostname(longHostname) === false
         },

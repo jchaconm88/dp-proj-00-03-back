@@ -4,6 +4,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    // En CI, fallar en cuanto un test falle (no esperar al resto del suite)
+    bail: process.env.CI ? 1 : 0,
     include: ['tests/**/*.{test,property,spec}.ts'],
     coverage: {
       provider: 'v8',

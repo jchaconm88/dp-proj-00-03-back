@@ -8,9 +8,15 @@ import { validateContactForm } from '../../src/validators/contact-form.js'
  * Properties 22, 23
  */
 
+/** Parte local alineada con isValidEmailRFC5322 en contact-form.ts */
+const validEmailLocal = fc
+  .string({ minLength: 1, maxLength: 64 })
+  .filter((s) => /^[a-zA-Z0-9!#$%&'*+/=?^_`{|}~.-]+$/.test(s))
+  .filter((s) => !s.startsWith('.') && !s.endsWith('.') && !s.includes('..'))
+
 const validEmail = fc
   .tuple(
-    fc.string({ minLength: 1, maxLength: 20 }).filter((s) => /^[a-zA-Z0-9._]+$/.test(s)),
+    validEmailLocal,
     fc.string({ minLength: 2, maxLength: 10 }).filter((s) => /^[a-zA-Z0-9]+$/.test(s)),
     fc.constantFrom('com', 'net', 'org', 'io', 'mx', 'es'),
   )

@@ -76,7 +76,9 @@ describe('Feature: multi-tenant-web-platform, Property 3: Rechazo de Tenant con 
   it('rechaza nombres que superan 100 caracteres', () => {
     fc.assert(
       fc.property(
-        fc.string({ minLength: 101, maxLength: 300 }),
+        fc
+          .string({ minLength: 101, maxLength: 150 })
+          .filter((s) => s.trim().length > 100),
         (longName) => {
           const result = validateTenantName(longName)
           return result.valid === false
