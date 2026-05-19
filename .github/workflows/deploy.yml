@@ -166,21 +166,34 @@ jobs:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Prepare Cloud Run environment file
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          PAYLOAD_PUBLIC_SERVER_URL: ${{ secrets.PAYLOAD_PUBLIC_SERVER_URL }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          FRONTEND_WEBHOOK_URL: ${{ secrets.FRONTEND_WEBHOOK_URL }}
+          FRONTEND_WEBHOOK_SECRET: ${{ secrets.FRONTEND_WEBHOOK_SECRET }}
+          JWT_EXTERNAL_PROVIDERS: ${{ secrets.JWT_EXTERNAL_PROVIDERS }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
         run: |
-          cat > /tmp/cloudrun-env.yaml <<EOF
-          NODE_ENV: production
-          DATABASE_URL: "${{ secrets.DATABASE_URL }}"
-          PAYLOAD_SECRET: "${{ secrets.PAYLOAD_SECRET }}"
-          PAYLOAD_PUBLIC_SERVER_URL: "${{ secrets.PAYLOAD_PUBLIC_SERVER_URL }}"
-          FIREBASE_STORAGE_BUCKET: "${{ secrets.FIREBASE_STORAGE_BUCKET }}"
-          FIREBASE_PROJECT_ID: "${{ secrets.FIREBASE_PROJECT_ID }}"
-          RESEND_API_KEY: "${{ secrets.RESEND_API_KEY }}"
-          TURNSTILE_SECRET_KEY: "${{ secrets.TURNSTILE_SECRET_KEY }}"
-          FRONTEND_WEBHOOK_URL: "${{ secrets.FRONTEND_WEBHOOK_URL }}"
-          FRONTEND_WEBHOOK_SECRET: "${{ secrets.FRONTEND_WEBHOOK_SECRET }}"
-          JWT_EXTERNAL_PROVIDERS: "${{ secrets.JWT_EXTERNAL_PROVIDERS }}"
-          ALERT_EMAIL: "${{ secrets.ALERT_EMAIL }}"
-          EOF
+          # Sin indentación en el YAML (heredoc indentado rompe las claves)
+          {
+            echo 'NODE_ENV: production'
+            echo "DATABASE_URL: \"${DATABASE_URL}\""
+            echo "PAYLOAD_SECRET: \"${PAYLOAD_SECRET}\""
+            echo "PAYLOAD_PUBLIC_SERVER_URL: \"${PAYLOAD_PUBLIC_SERVER_URL}\""
+            echo "FIREBASE_STORAGE_BUCKET: \"${FIREBASE_STORAGE_BUCKET}\""
+            echo "FIREBASE_PROJECT_ID: \"${FIREBASE_PROJECT_ID}\""
+            echo "RESEND_API_KEY: \"${RESEND_API_KEY}\""
+            echo "TURNSTILE_SECRET_KEY: \"${TURNSTILE_SECRET_KEY}\""
+            echo "FRONTEND_WEBHOOK_URL: \"${FRONTEND_WEBHOOK_URL}\""
+            echo "FRONTEND_WEBHOOK_SECRET: \"${FRONTEND_WEBHOOK_SECRET}\""
+            echo "JWT_EXTERNAL_PROVIDERS: \"${JWT_EXTERNAL_PROVIDERS}\""
+            echo "ALERT_EMAIL: \"${ALERT_EMAIL}\""
+          } > /tmp/cloudrun-env.yaml
 
       - name: Resolve container image
         id: image
@@ -190,29 +203,20 @@ jobs:
           echo "uri=$IMAGE" >> "$GITHUB_OUTPUT"
           echo "Deploying: $IMAGE"
 
-      - name: Reset conflicting env vars (Secret Manager → GitHub literals)
-        run: |
-          ENV_KEYS="DATABASE_URL,PAYLOAD_SECRET,RESEND_API_KEY,TURNSTILE_SECRET_KEY,FRONTEND_WEBHOOK_SECRET"
-          REGION="${{ secrets.GCP_REGION }}"
-          # --clear-env-vars no acepta lista; usar --remove-secrets y --remove-env-vars.
-          gcloud run services update dp-proj-00-03-cms \
-            --region="$REGION" \
-            --remove-secrets="$ENV_KEYS" \
-            --quiet || true
-          gcloud run services update dp-proj-00-03-cms \
-            --region="$REGION" \
-            --remove-env-vars="$ENV_KEYS" \
-            --quiet || true
-
       - name: Deploy to Cloud Run
         id: deploy
         run: |
+          # Un solo deploy (sin services update previo: dejaba revisiones sin env y fallaba el probe).
+          # --env-vars-file reemplaza todas las env; --remove-secrets quita bindings de Secret Manager.
+          ENV_KEYS="DATABASE_URL,PAYLOAD_SECRET,RESEND_API_KEY,TURNSTILE_SECRET_KEY,FRONTEND_WEBHOOK_SECRET"
           gcloud run deploy dp-proj-00-03-cms \
             --region="${{ secrets.GCP_REGION }}" \
             --image="${{ steps.image.outputs.uri }}" \
             --port=3000 \
+            --memory=1Gi \
             --cpu-boost \
             --timeout=300 \
+            --remove-secrets="$ENV_KEYS" \
             --env-vars-file=/tmp/cloudrun-env.yaml \
             --update-labels=managed-by=github-actions,commit-sha=${{ github.sha }} \
             --quiet
