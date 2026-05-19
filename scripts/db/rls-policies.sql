@@ -3,6 +3,11 @@
 -- Requisito 1.4, 9.2: datos de cada tenant aislados logicamente
 -- =============================================================================
 
+-- Migracion uuid → integer: CREATE OR REPLACE no cambia el tipo de retorno
+DROP FUNCTION IF EXISTS current_tenant_id() CASCADE;
+DROP FUNCTION IF EXISTS set_current_tenant(integer) CASCADE;
+DROP FUNCTION IF EXISTS set_current_tenant(uuid) CASCADE;
+
 -- Funcion helper: establece el tenant actual en la sesion de BD
 -- Payload usa tenants.id serial (integer), no UUID
 CREATE OR REPLACE FUNCTION set_current_tenant(p_tenant_id integer)
