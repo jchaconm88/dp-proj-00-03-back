@@ -189,17 +189,17 @@ jobs:
 
       - name: Reset conflicting env vars (Secret Manager → GitHub literals)
         run: |
-          # La acción deploy-cloudrun pierde el '=' en --remove-secrets; además no puede mezclarse con --env-vars-file.
           ENV_KEYS="DATABASE_URL,PAYLOAD_SECRET,RESEND_API_KEY,TURNSTILE_SECRET_KEY,FRONTEND_WEBHOOK_SECRET"
           REGION="${{ secrets.GCP_REGION }}"
+          # --clear-env-vars no acepta lista; usar --remove-secrets y --remove-env-vars.
           gcloud run services update dp-proj-00-03-cms \
             --region="$REGION" \
             --remove-secrets="$ENV_KEYS" \
             --quiet || true
           gcloud run services update dp-proj-00-03-cms \
             --region="$REGION" \
-            --clear-env-vars="$ENV_KEYS" \
-            --quiet
+            --remove-env-vars="$ENV_KEYS" \
+            --quiet || true
 
       - name: Deploy to Cloud Run
         id: deploy
