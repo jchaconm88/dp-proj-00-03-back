@@ -44,6 +44,7 @@ Roles ya asignados por infra: Artifact Registry Writer, Cloud Run Admin, Service
 | Secret | Uso |
 |--------|-----|
 | `DATABASE_URL_MIGRATE` | Connection string **owner** de Neon (sin pooler). `pnpm db:migrate` + scripts SQL |
+| `PAYLOAD_SECRET` | Obligatorio para que Payload arranque al ejecutar `payload migrate` (mismo valor que en Cloud Run) |
 
 Tras `terraform apply` en infra: `terraform output -raw neon_database_owner_connection_string`
 

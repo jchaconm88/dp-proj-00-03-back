@@ -78,6 +78,7 @@ jobs:
       - name: Run Payload migrations
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_MIGRATE }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
         run: pnpm db:migrate
 
       - name: Grants and RLS policies
