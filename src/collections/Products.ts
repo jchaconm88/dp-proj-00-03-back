@@ -3,6 +3,7 @@ import type {
   CollectionAfterChangeHook,
   CollectionAfterDeleteHook,
 } from 'payload'
+import { refId } from '../lib/payload-ids.ts'
 import { notifyContentChange } from '../services/webhook.ts'
 
 const PRODUCT_CATEGORIES = [
@@ -22,9 +23,9 @@ const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation })
 
   await notifyContentChange({
     event,
-    tenantId: doc['tenant'] as string,
+    tenantId: refId(doc['tenant']),
     collection: 'products',
-    documentId: doc['id'] as string,
+    documentId: refId(doc['id']),
     timestamp: new Date().toISOString(),
   })
 }
@@ -32,9 +33,9 @@ const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation })
 const afterDeleteWebhook: CollectionAfterDeleteHook = async ({ doc }) => {
   await notifyContentChange({
     event: 'content.updated',
-    tenantId: doc['tenant'] as string,
+    tenantId: refId(doc['tenant']),
     collection: 'products',
-    documentId: doc['id'] as string,
+    documentId: refId(doc['id']),
     timestamp: new Date().toISOString(),
   })
 }

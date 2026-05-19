@@ -29,7 +29,7 @@ export async function publishScheduledContent(payload: BasePayload): Promise<{
     try {
       await payload.update({
         collection: 'pages',
-        id: page['id'] as string,
+        id: page['id'],
         data: {
           status: 'published',
           publishDate: now,
@@ -37,7 +37,7 @@ export async function publishScheduledContent(payload: BasePayload): Promise<{
       })
       results.published++
     } catch (error) {
-      const errMsg = `pages:${page['id'] as string}: ${error instanceof Error ? error.message : String(error)}`
+      const errMsg = `pages:${String(page['id'])}: ${error instanceof Error ? error.message : String(error)}`
       results.errors.push(errMsg)
       results.failed++
 
@@ -70,7 +70,7 @@ export async function publishScheduledContent(payload: BasePayload): Promise<{
     try {
       await payload.update({
         collection: 'posts',
-        id: post['id'] as string,
+        id: post['id'],
         data: {
           status: 'published',
           publishDate: now,
@@ -78,7 +78,7 @@ export async function publishScheduledContent(payload: BasePayload): Promise<{
       })
       results.published++
     } catch (error) {
-      const errMsg = `posts:${post['id'] as string}: ${error instanceof Error ? error.message : String(error)}`
+      const errMsg = `posts:${String(post['id'])}: ${error instanceof Error ? error.message : String(error)}`
       results.errors.push(errMsg)
       results.failed++
 

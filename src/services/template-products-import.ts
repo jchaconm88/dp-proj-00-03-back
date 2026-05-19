@@ -1,5 +1,6 @@
 import type { Payload } from 'payload'
 import { PRODUCT_CATEGORY_VALUES } from '../collections/Products.ts'
+import type { Product } from '../payload-types.ts'
 
 export type ProductSeedItem = {
   slug: string
@@ -56,6 +57,7 @@ export async function upsertProductsForTenant(
   tenantId: string,
   items: ProductSeedItem[],
 ): Promise<ImportProductsResult> {
+  const tenantRef = Number(tenantId)
   const result: ImportProductsResult = {
     created: 0,
     updated: 0,
@@ -70,7 +72,7 @@ export async function upsertProductsForTenant(
         collection: 'products',
         where: {
           and: [
-            { tenant: { equals: tenantId } },
+            { tenant: { equals: tenantRef } },
             { slug: { equals: slug } },
           ],
         },
@@ -78,10 +80,10 @@ export async function upsertProductsForTenant(
         overrideAccess: true,
       })
 
-      const data = {
-        tenant: tenantId,
+      const data: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> = {
+        tenant: tenantRef,
         slug,
-        category: item.category,
+        category: item.category as Product['category'],
         title: item.title,
         price: item.price,
         oldPrice: item.oldPrice,
@@ -96,7 +98,7 @@ export async function upsertProductsForTenant(
       if (existing.docs[0]) {
         await payload.update({
           collection: 'products',
-          id: existing.docs[0]['id'] as string,
+          id: existing.docs[0]['id'],
           data,
           overrideAccess: true,
         })

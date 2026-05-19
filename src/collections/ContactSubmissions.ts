@@ -1,4 +1,5 @@
 import type { CollectionConfig, CollectionAfterChangeHook } from 'payload'
+import { refId } from '../lib/payload-ids.ts'
 import { validateContactForm } from '../validators/contact-form.ts'
 import { sendContactNotification } from '../services/notification.ts'
 
@@ -6,14 +7,14 @@ const afterCreate: CollectionAfterChangeHook = async ({ doc, operation, req }) =
   if (operation !== 'create') return
 
   // Enviar notificacion al tenant (async, con reintentos)
-  const tenantId = doc['tenant'] as string
-  if (tenantId) {
+  const tenantId = doc['tenant']
+  if (tenantId != null) {
     const tenant = await req.payload.findByID({ collection: 'tenants', id: tenantId })
     const settings = tenant['settings'] as { contactEmail?: string }
     if (settings.contactEmail) {
       // Ejecutar en background (no bloquear la respuesta al visitante)
       void sendContactNotification({
-        submissionId: doc['id'] as string,
+        submissionId: refId(doc['id']),
         tenantEmail: settings.contactEmail,
         name: doc['name'] as string,
         email: doc['email'] as string,

@@ -1,4 +1,5 @@
 import type { Endpoint, PayloadRequest } from 'payload'
+import type { Page, Tenant } from '../../payload-types.ts'
 import {
   withV1Auth,
   jsonResponse,
@@ -51,10 +52,10 @@ async function handleTenants(req: PayloadRequest): Promise<Response> {
       if (claims['role'] !== 'platform_admin') {
         return jsonError(403, 'FORBIDDEN', 'Solo platform_admin puede crear tenants')
       }
-      const body = await parseBody<Record<string, unknown>>(payloadReq)
+      const body = await parseBody<Partial<Tenant>>(payloadReq)
       const created = await payloadReq.payload.create({
         collection: 'tenants',
-        data: body,
+        data: body as Omit<Tenant, 'id' | 'createdAt' | 'updatedAt'>,
         overrideAccess: true,
       })
       return jsonResponse(created, 201)
@@ -74,7 +75,7 @@ async function handleTenants(req: PayloadRequest): Promise<Response> {
     if (payloadReq.method === 'PATCH' && segments.length === 2 && tenantId) {
       const denied = requireTenantAccess(claims, tenantId, url.pathname)
       if (denied) return denied
-      const body = await parseBody<Record<string, unknown>>(payloadReq)
+      const body = await parseBody<Partial<Tenant>>(payloadReq)
       const updated = await payloadReq.payload.update({
         collection: 'tenants',
         id: tenantId,
@@ -141,16 +142,17 @@ async function handleTenantNested(req: PayloadRequest): Promise<Response> {
 
     if (payloadReq.method === 'POST' && !resourceId) {
       const body = await parseBody<Record<string, unknown>>(payloadReq)
+      const tenantRef = Number(tenantId)
       const created = await payloadReq.payload.create({
         collection: collection as 'pages',
-        data: { ...body, tenant: tenantId },
+        data: { ...body, tenant: tenantRef } as Omit<Page, 'id' | 'createdAt' | 'updatedAt'>,
         overrideAccess: true,
       })
       return jsonResponse(created, 201)
     }
 
     if (payloadReq.method === 'PATCH' && resourceId) {
-      const body = await parseBody<Record<string, unknown>>(payloadReq)
+      const body = await parseBody<Partial<Page>>(payloadReq)
       const updated = await payloadReq.payload.update({
         collection: collection as 'pages',
         id: resourceId,

@@ -50,6 +50,15 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Production build (Next.js)
+        run: pnpm build
+        env:
+          CI: true
+          NEXT_TELEMETRY_DISABLED: 1
+          # Placeholders para que el typecheck de build no falle por env vacío
+          PAYLOAD_SECRET: ci-build-placeholder-secret-min-32-chars
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+
   migrate:
     name: Database migrations
     needs: test

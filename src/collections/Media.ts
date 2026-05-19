@@ -8,7 +8,7 @@ import {
 const validateMedia: CollectionBeforeChangeHook = async ({ data, req }) => {
   const mimeType = data['mimeType'] as string | undefined
   const fileSize = data['fileSize'] as number | undefined
-  const tenantId = data['tenant'] as string | undefined
+  const tenantId = data['tenant']
 
   // Validar tipo MIME — Property 8
   if (mimeType && !ALLOWED_MIME_TYPES.includes(mimeType as never)) {
@@ -109,9 +109,9 @@ export const Media: CollectionConfig = {
       async ({ doc, operation, req }) => {
         if (operation === 'create') {
           // Actualizar uso de storage del tenant
-          const tenantId = doc['tenant'] as string
+          const tenantId = doc['tenant']
           const fileSize = doc['fileSize'] as number
-          if (tenantId && fileSize) {
+          if (tenantId != null && fileSize) {
             const tenant = await req.payload.findByID({
               collection: 'tenants',
               id: tenantId,
@@ -130,9 +130,9 @@ export const Media: CollectionConfig = {
     afterDelete: [
       async ({ doc, req }) => {
         // Decrementar uso de storage al eliminar archivo
-        const tenantId = doc['tenant'] as string
+        const tenantId = doc['tenant']
         const fileSize = doc['fileSize'] as number
-        if (tenantId && fileSize) {
+        if (tenantId != null && fileSize) {
           const tenant = await req.payload.findByID({
             collection: 'tenants',
             id: tenantId,

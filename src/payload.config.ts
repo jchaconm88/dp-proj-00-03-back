@@ -26,6 +26,7 @@ import {
   publicTemplateAssetQueryEndpoint,
 } from './endpoints/publicTemplate.ts'
 import { v1ApiEndpoints } from './endpoints/v1/index.ts'
+import type { Config } from './payload-types.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -55,9 +56,9 @@ export default buildConfig({
   editor: lexicalEditor({}),
 
   plugins: [
-    multiTenantPlugin({
-      tenantCollection: 'tenants',
-      userHasAccessToAllTenants: (user) => user?.role === 'platform_admin',
+    multiTenantPlugin<Config>({
+      tenantsSlug: 'tenants',
+      userHasAccessToAllTenants: (user) => user.role === 'platform_admin',
       // Los usuarios NO son tenant-scoped (best practice del plugin)
       collections: {
         pages: {},
@@ -107,8 +108,8 @@ export default buildConfig({
     {
       path: '/health',
       method: 'get',
-      handler: async (_req, res) => {
-        res.status(200).json({
+      handler: async () => {
+        return Response.json({
           status: 'ok',
           timestamp: new Date().toISOString(),
           component: 'cms',
@@ -118,11 +119,11 @@ export default buildConfig({
     {
       path: '/internal/publish-scheduled',
       method: 'post',
-      handler: async (req, res) => {
+      handler: async (req) => {
         // Autenticado por OIDC token del Cloud Scheduler
         const { publishScheduledContent } = await import('./services/scheduler.ts')
         const result = await publishScheduledContent(req.payload)
-        res.status(200).json(result)
+        return Response.json(result)
       },
     },
   ],

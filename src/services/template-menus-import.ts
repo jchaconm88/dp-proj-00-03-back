@@ -1,4 +1,7 @@
 import type { Payload } from 'payload'
+import type { Menu } from '../payload-types.ts'
+
+type MenuItem = NonNullable<Menu['items']>[number]
 
 const MENU_LOCATIONS = ['header', 'footer', 'sidebar', 'custom'] as const
 
@@ -23,7 +26,7 @@ export type ImportMenusResult = {
   errors: Array<{ location: string; message: string }>
 }
 
-function mapItems(items: MenuSeedItem[]): Record<string, unknown>[] {
+function mapItems(items: MenuSeedItem[]): MenuItem[] {
   return items.map((item, index) => ({
     label: item.label,
     url: item.url,
@@ -72,6 +75,7 @@ export async function upsertMenusForTenant(
   tenantId: string,
   menus: MenuSeed[],
 ): Promise<ImportMenusResult> {
+  const tenantRef = Number(tenantId)
   const result: ImportMenusResult = {
     created: 0,
     updated: 0,
@@ -86,7 +90,7 @@ export async function upsertMenusForTenant(
         collection: 'menus',
         where: {
           and: [
-            { tenant: { equals: tenantId } },
+            { tenant: { equals: tenantRef } },
             { location: { equals: location } },
           ],
         },
@@ -94,17 +98,17 @@ export async function upsertMenusForTenant(
         overrideAccess: true,
       })
 
-      const data = {
-        tenant: tenantId,
+      const data: Omit<Menu, 'id' | 'createdAt' | 'updatedAt'> = {
+        tenant: tenantRef,
         name: menu.name,
-        location,
+        location: location as Menu['location'],
         items: mapItems(menu.items),
       }
 
       if (existing.docs[0]) {
         await payload.update({
           collection: 'menus',
-          id: existing.docs[0]['id'] as string,
+          id: existing.docs[0]['id'],
           data,
           overrideAccess: true,
         })

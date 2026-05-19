@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { refIdOptional } from '../lib/payload-ids.ts'
 import { MAX_LANGUAGES_PER_TENANT } from '../types/index.ts'
 
 export const TenantLanguages: CollectionConfig = {
@@ -16,7 +17,7 @@ export const TenantLanguages: CollectionConfig = {
   hooks: {
     beforeChange: [
       async ({ data, req, operation }) => {
-        const tenantId = data['tenant'] as string | undefined
+        const tenantId = refIdOptional(data['tenant'])
 
         if (tenantId && operation === 'create') {
           // Verificar limites de idiomas — Property 19
@@ -53,7 +54,7 @@ export const TenantLanguages: CollectionConfig = {
             if (lang['id'] !== data['id']) {
               await req.payload.update({
                 collection: 'tenant-languages',
-                id: lang['id'] as string,
+                id: lang['id'],
                 data: { isPrimary: false },
               })
             }

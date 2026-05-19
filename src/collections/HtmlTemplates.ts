@@ -6,6 +6,7 @@ import type {
 } from 'payload'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { refId, refIdOptional } from '../lib/payload-ids.ts'
 import { notifyContentChange } from '../services/webhook.ts'
 import { uploadBundle, deleteBundle } from '../services/template-storage.ts'
 
@@ -37,7 +38,7 @@ const validateTemplateId: CollectionBeforeChangeHook = async ({ data, req, opera
     data['templateId'] = templateId
   }
 
-  const tenantId = data['tenant'] as string | undefined
+  const tenantId = refIdOptional(data['tenant'])
 
   if (!templateId) {
     throw new Error(
@@ -86,7 +87,7 @@ const validateTemplateId: CollectionBeforeChangeHook = async ({ data, req, opera
   }
 
   if (operation === 'update' && originalDoc && templateId) {
-    const docTenant = (data['tenant'] ?? originalDoc['tenant']) as string
+    const docTenant = refId(data['tenant'] ?? originalDoc['tenant'])
     const existing = await req.payload.find({
       collection: 'html-templates',
       where: {
@@ -153,7 +154,7 @@ const extractZipAfterChange: CollectionAfterChangeHook = async ({ doc, req, oper
     const { bundleSizeBytes, manifest } = await uploadBundle(tenantId, templateId, buffer)
     await req.payload.update({
       collection: 'html-templates',
-      id: doc['id'] as string,
+      id: doc['id'],
       data: { bundleSizeBytes, manifest },
       req,
       context: { skipTemplateExtract: true },

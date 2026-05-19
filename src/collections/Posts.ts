@@ -1,4 +1,5 @@
 import type { CollectionConfig, CollectionAfterChangeHook } from 'payload'
+import { refId } from '../lib/payload-ids.ts'
 import { notifyContentChange } from '../services/webhook.ts'
 
 const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation }) => {
@@ -11,9 +12,9 @@ const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation })
 
   await notifyContentChange({
     event,
-    tenantId: doc['tenant'] as string,
+    tenantId: refId(doc['tenant']),
     collection: 'posts',
-    documentId: doc['id'] as string,
+    documentId: refId(doc['id']),
     timestamp: new Date().toISOString(),
   })
 }

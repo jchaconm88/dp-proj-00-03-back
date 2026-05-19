@@ -1,4 +1,5 @@
 import type { CollectionConfig, CollectionAfterChangeHook, CollectionBeforeChangeHook } from 'payload'
+import { refId } from '../lib/payload-ids.ts'
 import { notifyContentChange } from '../services/webhook.ts'
 import {
   loadActiveTemplateManifest,
@@ -20,9 +21,9 @@ const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation })
 
   await notifyContentChange({
     event,
-    tenantId: doc['tenant'] as string,
+    tenantId: refId(doc['tenant']),
     collection: 'pages',
-    documentId: doc['id'] as string,
+    documentId: refId(doc['id']),
     timestamp: new Date().toISOString(),
   })
 }
