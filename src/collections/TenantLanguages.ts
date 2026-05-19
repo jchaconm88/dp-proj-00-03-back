@@ -1,5 +1,5 @@
 import type { CollectionConfig } from 'payload'
-import { MIN_LANGUAGES_PER_TENANT, MAX_LANGUAGES_PER_TENANT } from '../types/index.ts'
+import { MAX_LANGUAGES_PER_TENANT } from '../types/index.ts'
 
 export const TenantLanguages: CollectionConfig = {
   slug: 'tenant-languages',

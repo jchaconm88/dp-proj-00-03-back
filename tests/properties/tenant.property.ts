@@ -105,8 +105,8 @@ describe('Feature: multi-tenant-web-platform, Property 4: Inmutabilidad de Tenan
           // Snapshot de T2 antes de modificar T1
           const t2Before = JSON.stringify(t2)
 
-          // Modificar T1 (simulado)
-          const _t1Updated = { ...t1, defaultLanguage: newDefaultLanguage }
+          // Modificar T1 (simulado) — no debe afectar T2
+          void { ...t1, defaultLanguage: newDefaultLanguage }
 
           // T2 no debe cambiar
           const t2After = JSON.stringify(t2)

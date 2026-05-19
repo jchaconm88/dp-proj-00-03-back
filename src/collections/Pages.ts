@@ -5,7 +5,7 @@ import {
   validatePageTranslationsTemplateData,
 } from '../services/template-data-validation.ts'
 
-const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation, req }) => {
+const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation }) => {
   let event: 'content.created' | 'content.updated' | 'content.published' | 'content.unpublished'
 
   if (operation === 'create') {

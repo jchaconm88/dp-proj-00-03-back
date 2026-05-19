@@ -28,11 +28,11 @@ export const publicProductsEndpoint: Endpoint = {
     }
 
     if (category) {
-      ;(where['and'] as unknown[]).push({ category: { equals: category } })
+      (where['and'] as unknown[]).push({ category: { equals: category } })
     }
 
     if (slugList.length > 0) {
-      ;(where['and'] as unknown[]).push({ slug: { in: slugList } })
+      (where['and'] as unknown[]).push({ slug: { in: slugList } })
     }
 
     const result = await req.payload.find({

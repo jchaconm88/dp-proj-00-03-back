@@ -193,7 +193,7 @@ export async function readFile(
 }
 
 export async function readIndexHtml(tenantId: string, templateId: string): Promise<string | null> {
-  let html = await readFile(tenantId, templateId, 'index.html')
+  const html = await readFile(tenantId, templateId, 'index.html')
   if (html) return html.toString('utf-8')
 
   const localRoot = localDir(tenantId, templateId)

@@ -177,7 +177,7 @@ const extractZipAfterChange: CollectionAfterChangeHook = async ({ doc, req, oper
   return doc
 }
 
-const afterDeleteCleanup: CollectionAfterDeleteHook = async ({ doc, req }) => {
+const afterDeleteCleanup: CollectionAfterDeleteHook = async ({ doc }) => {
   const tenantRef = doc['tenant']
   const tenantId =
     typeof tenantRef === 'object' && tenantRef !== null && 'id' in tenantRef

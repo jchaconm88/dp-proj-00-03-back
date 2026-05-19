@@ -69,7 +69,7 @@ describe('Feature: multi-tenant-web-platform, Property 25: Protección de Endpoi
       fc.property(
         fc.constantFrom('POST', 'PATCH', 'DELETE') as fc.Arbitrary<string>,
         fc.string({ minLength: 1, maxLength: 50 }),
-        (method, path) => {
+        (_method, _path) => {
           const hasAuthToken = false // Sin token
           if (!hasAuthToken) {
             // Simular rechazo 401
