@@ -4,12 +4,12 @@ WORKDIR /app
 
 # Dependencias
 FROM base AS deps
-COPY package.json pnpm-lock.yaml* ./
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 
 # Build
 FROM base AS builder
-COPY package.json pnpm-lock.yaml* ./
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build

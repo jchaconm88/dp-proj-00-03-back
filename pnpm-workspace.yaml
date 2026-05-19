@@ -1,3 +1,7 @@
+packages:
+  - '.'
+
+# pnpm 11: obligatorio en Docker/CI (no lee onlyBuiltDependencies de package.json)
 allowBuilds:
   esbuild: true
   protobufjs: true
