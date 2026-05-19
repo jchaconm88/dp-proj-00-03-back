@@ -5,6 +5,8 @@ Los valores no se guardan en GCP Secret Manager; el pipeline los inyecta al desp
 
 > **No** incluyas secretos en la imagen Docker. Solo se pasan a Cloud Run en el paso `deploy`.
 
+Si el servicio ya tenía variables enlazadas a **GCP Secret Manager**, el deploy usa `--remove-secrets` y las redefine como literales desde GitHub (evita el error *Cannot update environment variable to string literal because it has already been set with a different type*).
+
 ## Infraestructura (CI)
 
 | Secret | Uso |

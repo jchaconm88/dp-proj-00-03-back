@@ -194,7 +194,11 @@ jobs:
           service: dp-proj-00-03-cms
           region: ${{ secrets.GCP_REGION }}
           image: ${{ steps.image.outputs.uri }}
-          flags: '--env-vars-file=/tmp/cloudrun-env.yaml'
+          # Si el servicio se creó con Secret Manager (Terraform/manual), hay que quitar el
+          # binding antes de inyectar literales desde GitHub (SECRETS.md).
+          flags: >-
+            --remove-secrets=DATABASE_URL,PAYLOAD_SECRET,RESEND_API_KEY,TURNSTILE_SECRET_KEY,FRONTEND_WEBHOOK_SECRET
+            --env-vars-file=/tmp/cloudrun-env.yaml
 
       - name: Health check post-deploy
         id: health
