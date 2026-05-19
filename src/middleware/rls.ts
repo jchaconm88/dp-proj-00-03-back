@@ -18,10 +18,3 @@ export function rlsMiddleware(req: Request, _res: Response, next: NextFunction):
 
   next()
 }
-
-declare module 'express-serve-static-core' {
-  interface Request {
-    tenantId?: string
-    user?: unknown
-  }
-}

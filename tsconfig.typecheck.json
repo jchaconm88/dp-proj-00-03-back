@@ -10,7 +10,8 @@
     "src/services/**/*.ts",
     "src/validators/**/*.ts",
     "src/middleware/**/*.ts",
-    "src/types/**/*.ts"
+    "src/types/**/*.ts",
+    "src/types/**/*.d.ts"
   ],
   "exclude": ["node_modules", "dist", "tests"]
 }
