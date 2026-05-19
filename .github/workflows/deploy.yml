@@ -182,6 +182,8 @@ jobs:
           # Sin indentación en el YAML (heredoc indentado rompe las claves)
           {
             echo 'NODE_ENV: production'
+            echo 'PORT: "3000"'
+            echo 'HOSTNAME: "0.0.0.0"'
             echo "DATABASE_URL: \"${DATABASE_URL}\""
             echo "PAYLOAD_SECRET: \"${PAYLOAD_SECRET}\""
             echo "PAYLOAD_PUBLIC_SERVER_URL: \"${PAYLOAD_PUBLIC_SERVER_URL}\""
@@ -194,6 +196,12 @@ jobs:
             echo "JWT_EXTERNAL_PROVIDERS: \"${JWT_EXTERNAL_PROVIDERS}\""
             echo "ALERT_EMAIL: \"${ALERT_EMAIL}\""
           } > /tmp/cloudrun-env.yaml
+
+      - name: Validate required secrets
+        run: |
+          test -n "${{ secrets.PAYLOAD_SECRET }}" || { echo "::error::PAYLOAD_SECRET no está definido en el environment production"; exit 1; }
+          test -n "${{ secrets.DATABASE_URL }}" || { echo "::error::DATABASE_URL no está definido en el environment production"; exit 1; }
+          test -n "${{ secrets.PAYLOAD_PUBLIC_SERVER_URL }}" || { echo "::error::PAYLOAD_PUBLIC_SERVER_URL no está definido"; exit 1; }
 
       - name: Resolve container image
         id: image
@@ -209,17 +217,27 @@ jobs:
           # Un solo deploy (sin services update previo: dejaba revisiones sin env y fallaba el probe).
           # --env-vars-file reemplaza todas las env; --remove-secrets quita bindings de Secret Manager.
           ENV_KEYS="DATABASE_URL,PAYLOAD_SECRET,RESEND_API_KEY,TURNSTILE_SECRET_KEY,FRONTEND_WEBHOOK_SECRET"
-          gcloud run deploy dp-proj-00-03-cms \
+          if ! gcloud run deploy dp-proj-00-03-cms \
             --region="${{ secrets.GCP_REGION }}" \
             --image="${{ steps.image.outputs.uri }}" \
             --port=3000 \
             --memory=1Gi \
+            --cpu=2 \
             --cpu-boost \
             --timeout=300 \
             --remove-secrets="$ENV_KEYS" \
             --env-vars-file=/tmp/cloudrun-env.yaml \
             --update-labels=managed-by=github-actions,commit-sha=${{ github.sha }} \
-            --quiet
+            --quiet; then
+            echo "::group::Últimos logs de la revisión fallida"
+            gcloud logging read \
+              'resource.type="cloud_run_revision" AND resource.labels.service_name="dp-proj-00-03-cms"' \
+              --limit=40 \
+              --format='table(timestamp,textPayload)' \
+              --freshness=15m || true
+            echo "::endgroup::"
+            exit 1
+          fi
           URL=$(gcloud run services describe dp-proj-00-03-cms \
             --region="${{ secrets.GCP_REGION }}" \
             --format='value(status.url)')

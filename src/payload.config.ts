@@ -151,9 +151,12 @@ export default buildConfig({
     outputFile: path.resolve(__dirname, 'payload-types.ts'),
   },
 
-  graphQL: {
-    schemaOutputFile: path.resolve(__dirname, '../docs/schema.graphql'),
-  },
+  graphQL:
+    process.env['NODE_ENV'] === 'production'
+      ? {}
+      : {
+          schemaOutputFile: path.resolve(__dirname, '../docs/schema.graphql'),
+        },
 
   cors: trustedOrigins,
 
