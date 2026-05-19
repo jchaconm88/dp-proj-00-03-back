@@ -1,5 +1,5 @@
-FROM node:20-alpine AS base
-RUN corepack enable && corepack prepare pnpm@latest --activate
+FROM node:22-alpine AS base
+RUN corepack enable && corepack prepare pnpm@11.1.2 --activate
 WORKDIR /app
 
 # Dependencias
