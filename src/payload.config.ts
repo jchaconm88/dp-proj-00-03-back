@@ -108,7 +108,7 @@ export default buildConfig({
     {
       path: '/health/ready',
       method: 'get',
-      handler: async ({ req }) => {
+      handler: async (req) => {
         try {
           await req.payload.find({
             collection: 'tenants',
