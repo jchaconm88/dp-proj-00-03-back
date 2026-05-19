@@ -13,7 +13,7 @@ Backend CMS multi-tenant basado en Payload CMS 3.x para la plataforma dp-proj-00
 
 | Repositorio | Interface consumida | Versión mínima | Protocolo |
 |-------------|--------------------|--------------  |-----------|
-| dp-proj-00-03-infra | Cloud Run service, Secret Manager | terraform >= 1.6 | GCP APIs |
+| dp-proj-00-03-infra | Cloud Run service, Neon outputs | terraform >= 1.6 | GCP APIs |
 | dp-proj-00-03-front | Webhook de rebuild (`POST /api/webhooks/rebuild`) | v1 | HTTP POST |
 
 ## Contratos de API
@@ -62,10 +62,13 @@ pnpm test:integration  # Solo tests de integración
 
 ## Despliegue
 
-Los pushes a `main` se despliegan automáticamente vía GitHub Actions.
+Los pushes a `main` ejecutan: tests → migraciones BD → imagen Docker → Cloud Run.
+
+**Secretos:** solo en GitHub (environment `production`). Ver [`.github/SECRETS.md`](.github/SECRETS.md).
+El pipeline inyecta variables en Cloud Run al desplegar; no uses GCP Secret Manager ni metas secretos en la imagen Docker.
 
 ```bash
-# Build manual
+# Build manual (sin secretos en la imagen)
 docker build -t cms .
 docker run -p 3000:3000 --env-file .env.local cms
 ```

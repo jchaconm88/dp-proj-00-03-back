@@ -43,4 +43,4 @@ POST a `FRONTEND_WEBHOOK_URL` con cuerpo JSON `ContentChangeWebhook` y firma `X-
 
 ## Colección `html-templates`
 
-ZIP con `index.html`, almacenado en `tenants/{tenantId}/templates/{templateId}/`. Campo `templateId` en Pages referencia el slug de la plantilla.
+ZIP con `index.html`, `template.manifest.json` y `partials/`, almacenado en `tenants/{tenantId}/templates/{templateId}/`. Campo `templateId` en Pages referencia el slug de la plantilla. Campo `templateData` (JSON) en cada traducción de Pages alimenta los bloques del manifest.

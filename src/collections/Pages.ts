@@ -1,5 +1,9 @@
-import type { CollectionConfig, CollectionAfterChangeHook } from 'payload'
+import type { CollectionConfig, CollectionAfterChangeHook, CollectionBeforeChangeHook } from 'payload'
 import { notifyContentChange } from '../services/webhook.ts'
+import {
+  loadActiveTemplateManifest,
+  validatePageTranslationsTemplateData,
+} from '../services/template-data-validation.ts'
 
 const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation, req }) => {
   let event: 'content.created' | 'content.updated' | 'content.published' | 'content.unpublished'
@@ -23,6 +27,34 @@ const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation, r
   })
 }
 
+const validateTemplateDataHook: CollectionBeforeChangeHook = async ({ data, req }) => {
+  const templateId = data['templateId'] as string | undefined
+  const tenantRef = data['tenant']
+  const tenantId =
+    typeof tenantRef === 'object' && tenantRef !== null && 'id' in tenantRef
+      ? String((tenantRef as { id: unknown }).id)
+      : tenantRef
+        ? String(tenantRef)
+        : undefined
+
+  if (!templateId?.trim() || !tenantId) return data
+
+  const manifest = await loadActiveTemplateManifest(req.payload, tenantId, templateId.trim())
+  if (!manifest) {
+    throw new Error(
+      JSON.stringify([
+        {
+          field: 'templateId',
+          message: `No hay plantilla activa con templateId "${templateId}" para este tenant`,
+        },
+      ]),
+    )
+  }
+
+  validatePageTranslationsTemplateData(manifest, data['translations'])
+  return data
+}
+
 export const Pages: CollectionConfig = {
   slug: 'pages',
   admin: {
@@ -39,6 +71,7 @@ export const Pages: CollectionConfig = {
   },
   hooks: {
     beforeChange: [
+      validateTemplateDataHook,
       async ({ data, originalDoc }) => {
         // Validar fecha de programacion futura — Property 11
         if (data['status'] === 'scheduled' && data['scheduledDate']) {
@@ -147,6 +180,16 @@ export const Pages: CollectionConfig = {
         { name: 'metaTitle', type: 'text', maxLength: 70 },
         { name: 'metaDescription', type: 'textarea', maxLength: 160 },
         { name: 'canonicalUrl', type: 'text' },
+        {
+          name: 'templateData',
+          type: 'json',
+          admin: {
+            description: 'Secciones editables según la plantilla (templateId de la página).',
+            components: {
+              Field: '@/components/admin/TemplateDataField#TemplateDataField',
+            },
+          },
+        },
       ],
     },
     {

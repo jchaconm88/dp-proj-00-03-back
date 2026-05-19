@@ -150,11 +150,11 @@ const extractZipAfterChange: CollectionAfterChangeHook = async ({ doc, req, oper
   }
 
   try {
-    const bundleSize = await uploadBundle(tenantId, templateId, buffer)
+    const { bundleSizeBytes, manifest } = await uploadBundle(tenantId, templateId, buffer)
     await req.payload.update({
       collection: 'html-templates',
       id: doc['id'] as string,
-      data: { bundleSizeBytes: bundleSize },
+      data: { bundleSizeBytes, manifest },
       req,
       context: { skipTemplateExtract: true },
       overrideLock: true,
@@ -251,6 +251,14 @@ export const HtmlTemplates: CollectionConfig = {
         { label: 'Activa', value: 'active' },
         { label: 'Archivada', value: 'archived' },
       ],
+    },
+    {
+      name: 'manifest',
+      type: 'json',
+      admin: {
+        readOnly: true,
+        description: 'Esquema de bloques (template.manifest.json del ZIP)',
+      },
     },
     {
       name: 'bundleSizeBytes',

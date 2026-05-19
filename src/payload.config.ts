@@ -15,10 +15,15 @@ import { Media } from './collections/Media.ts'
 import { ContactSubmissions } from './collections/ContactSubmissions.ts'
 import { TenantLanguages } from './collections/TenantLanguages.ts'
 import { HtmlTemplates } from './collections/HtmlTemplates.ts'
+import { Products } from './collections/Products.ts'
+import { publicProductsEndpoint } from './endpoints/publicProducts.ts'
+import { adminImportProductsEndpoint } from './endpoints/adminImportProducts.ts'
+import { adminImportMenusEndpoint } from './endpoints/adminImportMenus.ts'
 import { publicResolveTenantEndpoint } from './endpoints/publicResolveTenant.ts'
 import {
   publicTemplateEndpoint,
   publicTemplateAssetEndpoint,
+  publicTemplateAssetQueryEndpoint,
 } from './endpoints/publicTemplate.ts'
 import { v1ApiEndpoints } from './endpoints/v1/index.ts'
 
@@ -62,6 +67,7 @@ export default buildConfig({
         'contact-submissions': {},
         'tenant-languages': {},
         'html-templates': {},
+        products: {},
         domains: {},
       },
     }),
@@ -78,6 +84,7 @@ export default buildConfig({
     ContactSubmissions,
     TenantLanguages,
     HtmlTemplates,
+    Products,
   ],
 
   admin: {
@@ -92,6 +99,10 @@ export default buildConfig({
     publicResolveTenantEndpoint,
     publicTemplateEndpoint,
     publicTemplateAssetEndpoint,
+    publicTemplateAssetQueryEndpoint,
+    publicProductsEndpoint,
+    adminImportProductsEndpoint,
+    adminImportMenusEndpoint,
     ...v1ApiEndpoints,
     {
       path: '/health',

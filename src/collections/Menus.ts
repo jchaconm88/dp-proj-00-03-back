@@ -1,23 +1,14 @@
 import type { CollectionConfig } from 'payload'
 
-const validateMenuItemDepth = (items: unknown[], depth = 1): boolean => {
-  if (!Array.isArray(items)) return true
-  if (depth > 3) return false // max 3 niveles — Property 9
-
-  for (const item of items) {
-    const typedItem = item as { children?: unknown[] }
-    if (typedItem.children && typedItem.children.length > 0) {
-      if (!validateMenuItemDepth(typedItem.children, depth + 1)) return false
-    }
-  }
-  return true
-}
-
 export const Menus: CollectionConfig = {
   slug: 'menus',
   admin: {
     useAsTitle: 'name',
     group: 'Contenido',
+    defaultColumns: ['name', 'location'],
+    components: {
+      beforeListTable: ['@/components/admin/MenusImportPanel#MenusImportPanel'],
+    },
   },
   access: {
     create: ({ req }) =>
@@ -26,21 +17,6 @@ export const Menus: CollectionConfig = {
     update: ({ req }) =>
       ['platform_admin', 'tenant_admin', 'editor'].includes(req.user?.role ?? ''),
     delete: ({ req }) => ['platform_admin', 'tenant_admin'].includes(req.user?.role ?? ''),
-  },
-  hooks: {
-    beforeChange: [
-      async ({ data }) => {
-        const items = data['items'] as unknown[] | undefined
-        if (items && !validateMenuItemDepth(items)) {
-          throw new Error(
-            JSON.stringify([
-              { field: 'items', message: 'Los menús no pueden superar 3 niveles de anidamiento' },
-            ]),
-          )
-        }
-        return data
-      },
-    ],
   },
   fields: [
     { name: 'name', type: 'text', required: true },
@@ -58,31 +34,18 @@ export const Menus: CollectionConfig = {
     {
       name: 'items',
       type: 'array',
+      labels: { singular: 'Enlace', plural: 'Enlaces' },
       fields: [
         { name: 'label', type: 'text', required: true },
         { name: 'url', type: 'text', required: true },
-        { name: 'sortOrder', type: 'number', defaultValue: 0 },
-        { name: 'depth', type: 'number', defaultValue: 1 },
+        { name: 'icon', type: 'text', admin: { description: 'Material Symbols (ej. woman, home)' } },
         {
-          name: 'children',
-          type: 'array',
-          fields: [
-            { name: 'label', type: 'text', required: true },
-            { name: 'url', type: 'text', required: true },
-            { name: 'sortOrder', type: 'number', defaultValue: 0 },
-            { name: 'depth', type: 'number', defaultValue: 2 },
-            {
-              name: 'children',
-              type: 'array',
-              fields: [
-                { name: 'label', type: 'text', required: true },
-                { name: 'url', type: 'text', required: true },
-                { name: 'sortOrder', type: 'number', defaultValue: 0 },
-                { name: 'depth', type: 'number', defaultValue: 3 },
-              ],
-            },
-          ],
+          name: 'active',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: { description: 'Enlace activo en la navegación' },
         },
+        { name: 'sortOrder', type: 'number', defaultValue: 0 },
       ],
     },
   ],

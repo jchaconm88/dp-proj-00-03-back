@@ -24,6 +24,7 @@
     "db:migrate": "payload migrate",
     "db:migrate:status": "payload migrate:status",
     "db:migrate:create": "payload migrate:create",
+    "db:post-migrate": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f scripts/db/grant-app-user.sql && psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f scripts/db/rls-policies.sql",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:properties": "vitest run tests/properties",

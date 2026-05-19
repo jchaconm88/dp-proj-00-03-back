@@ -50,9 +50,44 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+  migrate:
+    name: Database migrations
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Run Payload migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_MIGRATE }}
+        run: pnpm db:migrate
+
+      - name: Grants and RLS policies
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_MIGRATE }}
+        run: pnpm db:post-migrate
+
   build-and-push:
     name: Build & Push Docker image
-    needs: test
+    needs: migrate
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -114,6 +149,23 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
+      - name: Prepare Cloud Run environment file
+        run: |
+          cat > /tmp/cloudrun-env.yaml <<EOF
+          NODE_ENV: production
+          DATABASE_URL: "${{ secrets.DATABASE_URL }}"
+          PAYLOAD_SECRET: "${{ secrets.PAYLOAD_SECRET }}"
+          PAYLOAD_PUBLIC_SERVER_URL: "${{ secrets.PAYLOAD_PUBLIC_SERVER_URL }}"
+          FIREBASE_STORAGE_BUCKET: "${{ secrets.FIREBASE_STORAGE_BUCKET }}"
+          FIREBASE_PROJECT_ID: "${{ secrets.FIREBASE_PROJECT_ID }}"
+          RESEND_API_KEY: "${{ secrets.RESEND_API_KEY }}"
+          TURNSTILE_SECRET_KEY: "${{ secrets.TURNSTILE_SECRET_KEY }}"
+          FRONTEND_WEBHOOK_URL: "${{ secrets.FRONTEND_WEBHOOK_URL }}"
+          FRONTEND_WEBHOOK_SECRET: "${{ secrets.FRONTEND_WEBHOOK_SECRET }}"
+          JWT_EXTERNAL_PROVIDERS: "${{ secrets.JWT_EXTERNAL_PROVIDERS }}"
+          ALERT_EMAIL: "${{ secrets.ALERT_EMAIL }}"
+          EOF
+
       - name: Deploy to Cloud Run
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
@@ -121,6 +173,7 @@ jobs:
           service: dp-proj-00-03-cms
           region: ${{ secrets.GCP_REGION }}
           image: ${{ needs.build-and-push.outputs.image }}
+          flags: '--env-vars-file=/tmp/cloudrun-env.yaml'
 
       - name: Health check post-deploy
         id: health

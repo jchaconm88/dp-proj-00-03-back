@@ -4,6 +4,13 @@ import { createReadStream, existsSync } from 'node:fs'
 import AdmZip from 'adm-zip'
 import admin from 'firebase-admin'
 import { MAX_FILE_SIZE_BYTES } from '../types/index.ts'
+import {
+  MANIFEST_FILENAME,
+  parseTemplateManifestFromBuffer,
+  validateZipEntriesAgainstManifest,
+  listPartialPaths,
+  type TemplateManifest,
+} from './template-manifest.ts'
 
 const LOCAL_ROOT =
   process.env['TEMPLATE_STORAGE_ROOT'] ?? path.join(process.cwd(), 'storage', 'templates')
@@ -53,22 +60,30 @@ function assertSafeRelativePath(relativePath: string): void {
   }
 }
 
-export function validateTemplateZip(buffer: Buffer): void {
+export function validateTemplateZip(buffer: Buffer): TemplateManifest {
   if (buffer.length > MAX_FILE_SIZE_BYTES) {
     throw new Error(`El ZIP supera el límite de ${Math.round(MAX_FILE_SIZE_BYTES / 1024 / 1024)} MB`)
   }
 
   const zip = new AdmZip(buffer)
-  const entries = zip.getEntries()
-  const hasIndex = entries.some((e) => {
-    if (e.isDirectory) return false
-    const name = e.entryName.replace(/\\/g, '/').replace(/^\.\//, '')
-    return name === 'index.html' || name.endsWith('/index.html')
-  })
+  const entryNames = zip
+    .getEntries()
+    .filter((e) => !e.isDirectory)
+    .map((e) => e.entryName.replace(/\\/g, '/').replace(/^\.\//, ''))
 
-  if (!hasIndex) {
-    throw new Error('El ZIP debe contener index.html en la raíz o en un subdirectorio')
+  const manifestEntry = entryNames.find((n) => n === MANIFEST_FILENAME || n.endsWith(`/${MANIFEST_FILENAME}`))
+  if (!manifestEntry) {
+    throw new Error(`El ZIP debe incluir ${MANIFEST_FILENAME} en la raíz`)
   }
+
+  const manifestBuf = zip.getEntry(manifestEntry)?.getData()
+  if (!manifestBuf) {
+    throw new Error(`No se pudo leer ${MANIFEST_FILENAME}`)
+  }
+
+  const manifest = parseTemplateManifestFromBuffer(manifestBuf)
+  validateZipEntriesAgainstManifest(entryNames, manifest)
+  return manifest
 }
 
 async function writeLocalFile(
@@ -96,12 +111,17 @@ async function writeGcsFile(
   await bucket.file(objectPath).save(data, { resumable: false })
 }
 
+export interface UploadBundleResult {
+  bundleSizeBytes: number
+  manifest: TemplateManifest
+}
+
 export async function uploadBundle(
   tenantId: string,
   templateId: string,
   zipBuffer: Buffer,
-): Promise<number> {
-  validateTemplateZip(zipBuffer)
+): Promise<UploadBundleResult> {
+  const manifest = validateTemplateZip(zipBuffer)
   await deleteBundle(tenantId, templateId)
 
   const zip = new AdmZip(zipBuffer)
@@ -121,7 +141,31 @@ export async function uploadBundle(
     }
   }
 
-  return totalBytes
+  return { bundleSizeBytes: totalBytes, manifest }
+}
+
+export async function readManifestFromStorage(
+  tenantId: string,
+  templateId: string,
+): Promise<TemplateManifest | null> {
+  const buf = await readFile(tenantId, templateId, MANIFEST_FILENAME)
+  if (!buf) return null
+  return parseTemplateManifestFromBuffer(buf)
+}
+
+export async function readAllPartials(
+  tenantId: string,
+  templateId: string,
+  manifest: TemplateManifest,
+): Promise<Record<string, string>> {
+  const partials: Record<string, string> = {}
+  for (const partialPath of listPartialPaths(manifest)) {
+    const buf = await readFile(tenantId, templateId, partialPath)
+    if (buf) {
+      partials[partialPath] = buf.toString('utf-8')
+    }
+  }
+  return partials
 }
 
 export async function readFile(
