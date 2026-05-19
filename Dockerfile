@@ -5,6 +5,9 @@ WORKDIR /app
 FROM base AS builder
 ENV CI=true
 ENV NEXT_TELEMETRY_DISABLED=1
+# Placeholders: solo para compilar config y generar payload-types.ts (no hay DB en build)
+ENV PAYLOAD_SECRET=build-placeholder-secret-minimum-32-chars
+ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
