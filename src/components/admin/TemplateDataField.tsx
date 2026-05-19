@@ -279,10 +279,11 @@ export const TemplateDataField: JSONFieldClientComponent = ({ field, path }) => 
   const { value, setValue } = useField<Record<string, Record<string, unknown>> | null>({
     path,
   })
-  const templateId = useFormFields(
-    ([fields]: [AdminFormFields]) => fields.templateId?.value as string | undefined,
-  )
-  const tenant = useFormFields(([fields]: [AdminFormFields]) => fields.tenant?.value)
+  const templateId = useFormFields(([fields]) => {
+    const f = fields as AdminFormFields
+    return f.templateId?.value as string | undefined
+  })
+  const tenant = useFormFields(([fields]) => (fields as AdminFormFields).tenant?.value)
 
   const [manifest, setManifest] = useState<Manifest | null>(null)
   const [loading, setLoading] = useState(false)
