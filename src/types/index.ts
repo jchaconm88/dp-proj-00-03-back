@@ -17,6 +17,8 @@ export interface TenantSettings {
   maxStorageBytes: number // default: 5 * 1024 * 1024 * 1024 (5GB)
   currentStorageBytes: number
   captchaEnabled: boolean
+  /** Slug CMS de la página de inicio; URL pública = /{idioma}/ */
+  homePageSlug?: string
   frontendWebhookUrl?: string
 }
 

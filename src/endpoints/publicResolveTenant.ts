@@ -57,6 +57,10 @@ export const publicResolveTenantEndpoint: Endpoint = {
         maxStorageBytes: settings['maxStorageBytes'] ?? 0,
         currentStorageBytes: settings['currentStorageBytes'] ?? 0,
         captchaEnabled: settings['captchaEnabled'] ?? false,
+        homePageSlug:
+          typeof settings['homePageSlug'] === 'string' && settings['homePageSlug'].trim()
+            ? settings['homePageSlug'].trim().toLowerCase()
+            : 'home',
         frontendWebhookUrl: settings['frontendWebhookUrl'],
       },
       createdAt: tenant['createdAt'],

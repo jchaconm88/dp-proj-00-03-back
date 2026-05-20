@@ -166,6 +166,15 @@ export const Tenants: CollectionConfig = {
           },
         },
         {
+          name: 'homePageSlug',
+          type: 'text',
+          defaultValue: 'home',
+          admin: {
+            description:
+              'Slug de la página de inicio en Pages (ej. home). Se muestra en /es/ sin ese segmento en la URL.',
+          },
+        },
+        {
           name: 'frontendWebhookUrl',
           type: 'text',
           admin: {
