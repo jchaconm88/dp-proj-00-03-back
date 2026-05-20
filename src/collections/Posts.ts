@@ -1,4 +1,5 @@
 import type { CollectionConfig, CollectionAfterChangeHook } from 'payload'
+import { rejectScheduledIfDisabled } from '../hooks/reject-scheduled-if-disabled.ts'
 import { refId } from '../lib/payload-ids.ts'
 import { notifyContentChange } from '../services/webhook.ts'
 
@@ -35,6 +36,7 @@ export const Posts: CollectionConfig = {
   },
   hooks: {
     beforeChange: [
+      rejectScheduledIfDisabled,
       async ({ data }) => {
         if (data['status'] === 'scheduled' && data['scheduledDate']) {
           const scheduled = new Date(data['scheduledDate'] as string)

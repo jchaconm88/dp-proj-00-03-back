@@ -1,4 +1,5 @@
 import type { CollectionConfig, CollectionAfterChangeHook, CollectionBeforeChangeHook } from 'payload'
+import { rejectScheduledIfDisabled } from '../hooks/reject-scheduled-if-disabled.ts'
 import { refId } from '../lib/payload-ids.ts'
 import { notifyContentChange } from '../services/webhook.ts'
 import {
@@ -72,6 +73,7 @@ export const Pages: CollectionConfig = {
   },
   hooks: {
     beforeChange: [
+      rejectScheduledIfDisabled,
       validateTemplateDataHook,
       async ({ data, originalDoc }) => {
         // Validar fecha de programacion futura — Property 11

@@ -68,6 +68,8 @@ Tras `terraform apply` en infra: `terraform output -raw neon_database_owner_conn
 
 \*Recomendado en producción.
 
+**No es secret (fijado en `deploy.yml`):** `PUBLISH_SCHEDULER_ENABLED` — por defecto `"false"`. Cambia a `"true"` cuando en infra tengas `enable_publish_scheduler = true` y el job de Scheduler activo.
+
 `DATABASE_URL`: `terraform output -raw neon_database_connection_string`
 
 Genera `PAYLOAD_SECRET` una vez (ej. `openssl rand -base64 48`) y reutilízalo entre despliegues.

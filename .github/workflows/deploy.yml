@@ -194,6 +194,7 @@ jobs:
             echo "FRONTEND_WEBHOOK_SECRET: \"${FRONTEND_WEBHOOK_SECRET}\""
             echo "JWT_EXTERNAL_PROVIDERS: \"${JWT_EXTERNAL_PROVIDERS}\""
             echo "ALERT_EMAIL: \"${ALERT_EMAIL}\""
+            echo 'PUBLISH_SCHEDULER_ENABLED: "false"'
           } > /tmp/cloudrun-env.yaml
 
       - name: Validate required secrets
@@ -220,8 +221,9 @@ jobs:
             --region="${{ secrets.GCP_REGION }}" \
             --image="${{ steps.image.outputs.uri }}" \
             --port=3000 \
+            --min-instances=0 \
             --memory=1Gi \
-            --cpu=2 \
+            --cpu=1 \
             --cpu-boost \
             --timeout=300 \
             --remove-secrets="$ENV_KEYS" \

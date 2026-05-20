@@ -27,6 +27,7 @@ import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0
 import { TemplateDataField as TemplateDataField_b431246ae72e5f314a991b61599094ab } from '@/components/admin/TemplateDataField'
 import { MenusImportPanel as MenusImportPanel_43b2fbce2aa599f0b0405607d49af5fc } from '@/components/admin/MenusImportPanel'
 import { ProductsImportPanel as ProductsImportPanel_4adfd106d40af0d13fbf3d378c497ce6 } from '@/components/admin/ProductsImportPanel'
+import { ScheduledPublishBanner as ScheduledPublishBanner_44c8c85cc6e7ec59bce11fdec17324c7 } from '@/components/admin/ScheduledPublishBanner'
 import { TenantSelector as TenantSelector_d6d5f193a167989e2ee7d14202901e62 } from '@payloadcms/plugin-multi-tenant/rsc'
 import { TenantSelectionProvider as TenantSelectionProvider_d6d5f193a167989e2ee7d14202901e62 } from '@payloadcms/plugin-multi-tenant/rsc'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
@@ -62,6 +63,7 @@ export const importMap = {
   "@/components/admin/TemplateDataField#TemplateDataField": TemplateDataField_b431246ae72e5f314a991b61599094ab,
   "@/components/admin/MenusImportPanel#MenusImportPanel": MenusImportPanel_43b2fbce2aa599f0b0405607d49af5fc,
   "@/components/admin/ProductsImportPanel#ProductsImportPanel": ProductsImportPanel_4adfd106d40af0d13fbf3d378c497ce6,
+  "@/components/admin/ScheduledPublishBanner#ScheduledPublishBanner": ScheduledPublishBanner_44c8c85cc6e7ec59bce11fdec17324c7,
   "@payloadcms/plugin-multi-tenant/rsc#TenantSelector": TenantSelector_d6d5f193a167989e2ee7d14202901e62,
   "@payloadcms/plugin-multi-tenant/rsc#TenantSelectionProvider": TenantSelectionProvider_d6d5f193a167989e2ee7d14202901e62,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1

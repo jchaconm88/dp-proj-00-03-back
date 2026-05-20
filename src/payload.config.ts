@@ -93,6 +93,9 @@ export default buildConfig({
     meta: {
       titleSuffix: '— dp-proj-00-03 CMS',
     },
+    components: {
+      beforeDashboard: ['@/components/admin/ScheduledPublishBanner#ScheduledPublishBanner'],
+    },
   },
 
   // Endpoints personalizados (ademas de los REST/GraphQL automaticos)
@@ -139,7 +142,13 @@ export default buildConfig({
       path: '/internal/publish-scheduled',
       method: 'post',
       handler: async (req) => {
-        // Autenticado por OIDC token del Cloud Scheduler
+        const { isPublishSchedulerEnabled } = await import('./lib/publish-scheduler-config.ts')
+        if (!isPublishSchedulerEnabled()) {
+          return Response.json(
+            { error: 'Publish scheduler is disabled (PUBLISH_SCHEDULER_ENABLED)' },
+            { status: 503 },
+          )
+        }
         const { publishScheduledContent } = await import('./services/scheduler.ts')
         const result = await publishScheduledContent(req.payload)
         return Response.json(result)
