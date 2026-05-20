@@ -5,6 +5,7 @@ import * as migration_20260519_010000_template_manifest from './20260519_010000_
 import * as migration_20260519_020000_products from './20260519_020000_products'
 import * as migration_20260519_030000_products_locked_rels from './20260519_030000_products_locked_rels'
 import * as migration_20260520_000000_menus_flat from './20260520_000000_menus_flat'
+import * as migration_20260520_120000_tenant_home_page_slug from './20260520_120000_tenant_home_page_slug'
 
 export const migrations = [
   {
@@ -41,5 +42,10 @@ export const migrations = [
     up: migration_20260520_000000_menus_flat.up,
     down: migration_20260520_000000_menus_flat.down,
     name: '20260520_000000_menus_flat',
+  },
+  {
+    up: migration_20260520_120000_tenant_home_page_slug.up,
+    down: migration_20260520_120000_tenant_home_page_slug.down,
+    name: '20260520_120000_tenant_home_page_slug',
   },
 ]
