@@ -224,6 +224,7 @@ jobs:
             --min-instances=0 \
             --memory=1Gi \
             --cpu=1 \
+            --cpu-throttling \
             --cpu-boost \
             --timeout=300 \
             --remove-secrets="$ENV_KEYS" \
