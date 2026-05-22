@@ -24,8 +24,12 @@ export const Users: CollectionConfig = {
       ['platform_admin', 'tenant_admin', 'editor', 'viewer'].includes(req.user?.role ?? ''),
     create: ({ req }) =>
       req.user?.role === 'platform_admin' || req.user?.role === 'tenant_admin',
-    read: ({ req }) =>
-      req.user?.role === 'platform_admin' || req.user?.role === 'tenant_admin',
+    read: ({ req }) => {
+      if (!req.user) return false
+      if (req.user.role === 'platform_admin' || req.user.role === 'tenant_admin') return true
+      // editor/viewer: lectura del propio usuario (logout, /me, refresh de sesión)
+      return { id: { equals: req.user.id } }
+    },
     update: ({ req, id }) => {
       if (req.user?.role === 'platform_admin') return true
       if (req.user?.role === 'tenant_admin') return true
@@ -38,8 +42,18 @@ export const Users: CollectionConfig = {
   hooks: {
     beforeChange: [
       async ({ data, operation }) => {
+        const role = data['role'] as string | undefined
+        const tenantIdRaw = data['tenantId'] as string | undefined
+        const tenantId = tenantIdRaw?.trim()
+
+        if (tenantId && role && role !== 'platform_admin') {
+          const tenantNum = Number.parseInt(tenantId, 10)
+          if (Number.isFinite(tenantNum) && tenantNum > 0) {
+            data['tenants'] = [{ tenant: tenantNum }]
+          }
+        }
+
         if (operation === 'update') {
-          // Actualizar lastActivity al modificar el usuario
           return { ...data, lastActivity: new Date().toISOString() }
         }
         return data

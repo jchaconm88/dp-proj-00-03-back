@@ -27,6 +27,7 @@ import {
 } from './endpoints/publicTemplate.ts'
 import { v1ApiEndpoints } from './endpoints/v1/index.ts'
 import type { Config } from './payload-types.ts'
+import { legacyTenantAccessOverride } from './lib/multi-tenant-access.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -35,11 +36,28 @@ const serverURL =
   process.env['PAYLOAD_PUBLIC_SERVER_URL'] ??
   `http://localhost:${process.env['PORT'] ?? '3000'}`
 
-const trustedOrigins = [
-  serverURL,
-  process.env['FRONTEND_URL'] ?? '',
-  'http://localhost:4321',
-].filter(Boolean)
+function normalizeOrigin(url: string): string {
+  return url.trim().replace(/\/$/, '')
+}
+
+/** Orígenes para cors/csrf; deben coincidir con la URL del navegador (logout/login). */
+function buildTrustedOrigins(): string[] {
+  const origins = new Set<string>()
+  const add = (raw: string | undefined) => {
+    if (!raw?.trim()) return
+    for (const part of raw.split(',')) {
+      const o = normalizeOrigin(part)
+      if (o) origins.add(o)
+    }
+  }
+  add(serverURL)
+  add(process.env['FRONTEND_URL'])
+  add(process.env['PAYLOAD_CSRF_ORIGINS'])
+  origins.add('http://localhost:4321')
+  return [...origins]
+}
+
+const trustedOrigins = buildTrustedOrigins()
 
 export default buildConfig({
   serverURL,
@@ -65,15 +83,15 @@ export default buildConfig({
       useTenantsCollectionAccess: false,
       // Los usuarios NO son tenant-scoped (best practice del plugin)
       collections: {
-        pages: {},
-        posts: {},
-        menus: {},
-        media: {},
-        'contact-submissions': {},
-        'tenant-languages': {},
-        'html-templates': {},
-        products: {},
-        domains: {},
+        pages: { accessResultOverride: legacyTenantAccessOverride },
+        posts: { accessResultOverride: legacyTenantAccessOverride },
+        menus: { accessResultOverride: legacyTenantAccessOverride },
+        media: { accessResultOverride: legacyTenantAccessOverride },
+        'contact-submissions': { accessResultOverride: legacyTenantAccessOverride },
+        'tenant-languages': { accessResultOverride: legacyTenantAccessOverride },
+        'html-templates': { accessResultOverride: legacyTenantAccessOverride },
+        products: { accessResultOverride: legacyTenantAccessOverride },
+        domains: { accessResultOverride: legacyTenantAccessOverride },
       },
     }),
   ],

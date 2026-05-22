@@ -56,7 +56,8 @@ Tras `terraform apply` en infra: `terraform output -raw neon_database_owner_conn
 |--------|-------------|-----|
 | `DATABASE_URL` | Sí | `app_user` — runtime CMS |
 | `PAYLOAD_SECRET` | Sí | Firma de sesiones Payload (≥32 caracteres) |
-| `PAYLOAD_PUBLIC_SERVER_URL` | Sí | URL pública del CMS (Cloud Run) |
+| `PAYLOAD_PUBLIC_SERVER_URL` | Sí | URL **exacta** del admin en el navegador (ej. `https://cms.tudominio.com`). Si usas dominio custom distinto a `*.run.app`, añade también `PAYLOAD_CSRF_ORIGINS` con esa URL o logout/login devuelven 400. |
+| `PAYLOAD_CSRF_ORIGINS` | No | Orígenes extra separados por coma (mismo esquema/host que ves en la barra del admin) |
 | `FIREBASE_STORAGE_BUCKET` | Sí | Bucket de media/plantillas |
 | `FIREBASE_PROJECT_ID` | Sí | Proyecto Firebase/GCP |
 | `RESEND_API_KEY` | No* | Envío de email |

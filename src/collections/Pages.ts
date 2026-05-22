@@ -80,8 +80,11 @@ export const Pages: CollectionConfig = {
     create: ({ req }) =>
       ['platform_admin', 'tenant_admin', 'editor'].includes(req.user?.role ?? ''),
     read: () => true,
-    update: ({ req }) =>
-      ['platform_admin', 'tenant_admin', 'editor'].includes(req.user?.role ?? ''),
+    update: ({ req }) => {
+      const role = req.user?.role ?? ''
+      if (role === 'viewer') return false
+      return ['platform_admin', 'tenant_admin', 'editor'].includes(role)
+    },
     delete: ({ req }) => ['platform_admin', 'tenant_admin'].includes(req.user?.role ?? ''),
   },
   hooks: {
