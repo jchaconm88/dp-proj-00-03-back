@@ -1,5 +1,10 @@
 import type { CollectionConfig, CollectionAfterChangeHook, CollectionBeforeChangeHook } from 'payload'
 import { rejectScheduledIfDisabled } from '../hooks/reject-scheduled-if-disabled.ts'
+import {
+  getContentPreviousStatus,
+  resolveContentChangeEvent,
+  storeContentPreviousStatus,
+} from '../hooks/content-previous-status.ts'
 import { refId } from '../lib/payload-ids.ts'
 import { notifyContentChange } from '../services/webhook.ts'
 import {
@@ -12,17 +17,7 @@ import {
 } from '../services/template-data-validation.ts'
 
 const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation, req }) => {
-  let event: 'content.created' | 'content.updated' | 'content.published' | 'content.unpublished'
-
-  if (operation === 'create') {
-    event = 'content.created'
-  } else if (doc['status'] === 'published') {
-    event = 'content.published'
-  } else if (doc['_previousStatus'] === 'published' && doc['status'] !== 'published') {
-    event = 'content.unpublished'
-  } else {
-    event = 'content.updated'
-  }
+  const event = resolveContentChangeEvent(operation, doc, getContentPreviousStatus(req))
 
   const tenantId = refId(doc['tenant'])
   const slug = String(doc['slug'] ?? '').trim()
@@ -91,7 +86,8 @@ export const Pages: CollectionConfig = {
     beforeChange: [
       rejectScheduledIfDisabled,
       validateTemplateDataHook,
-      async ({ data, originalDoc }) => {
+      storeContentPreviousStatus,
+      async ({ data }) => {
         // Validar fecha de programacion futura — Property 11
         if (data['status'] === 'scheduled' && data['scheduledDate']) {
           const scheduled = new Date(data['scheduledDate'] as string)
@@ -105,11 +101,6 @@ export const Pages: CollectionConfig = {
               ]),
             )
           }
-        }
-
-        // Guardar estado anterior para el webhook
-        if (originalDoc) {
-          data['_previousStatus'] = originalDoc['status']
         }
 
         return data

@@ -1,5 +1,10 @@
 import type { CollectionConfig, CollectionAfterChangeHook } from 'payload'
 import { rejectScheduledIfDisabled } from '../hooks/reject-scheduled-if-disabled.ts'
+import {
+  getContentPreviousStatus,
+  resolveContentChangeEvent,
+  storeContentPreviousStatus,
+} from '../hooks/content-previous-status.ts'
 import { refId } from '../lib/payload-ids.ts'
 import { notifyContentChange } from '../services/webhook.ts'
 import {
@@ -8,17 +13,7 @@ import {
 } from '../services/published-content-versions.ts'
 
 const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation, req }) => {
-  let event: 'content.created' | 'content.updated' | 'content.published' | 'content.unpublished'
-
-  if (operation === 'create') {
-    event = 'content.created'
-  } else if (doc['status'] === 'published') {
-    event = 'content.published'
-  } else if (doc['_previousStatus'] === 'published' && doc['status'] !== 'published') {
-    event = 'content.unpublished'
-  } else {
-    event = 'content.updated'
-  }
+  const event = resolveContentChangeEvent(operation, doc, getContentPreviousStatus(req))
 
   const tenantId = refId(doc['tenant'])
   const slug = String(doc['slug'] ?? '').trim()
@@ -55,6 +50,7 @@ export const Posts: CollectionConfig = {
   hooks: {
     beforeChange: [
       rejectScheduledIfDisabled,
+      storeContentPreviousStatus,
       async ({ data }) => {
         if (data['status'] === 'scheduled' && data['scheduledDate']) {
           const scheduled = new Date(data['scheduledDate'] as string)
