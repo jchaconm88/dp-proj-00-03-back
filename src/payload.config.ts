@@ -58,7 +58,11 @@ export default buildConfig({
   plugins: [
     multiTenantPlugin<Config>({
       tenantsSlug: 'tenants',
-      userHasAccessToAllTenants: (user) => user.role === 'platform_admin',
+      // role debe estar en JWT (saveToJWT en Users); si no, el plugin limita tenants y el selector cuelga
+      userHasAccessToAllTenants: (user) =>
+        (user as { role?: string }).role === 'platform_admin',
+      // Acceso a tenants lo define la colección Tenants (platform_admin + tenant_admin)
+      useTenantsCollectionAccess: false,
       // Los usuarios NO son tenant-scoped (best practice del plugin)
       collections: {
         pages: {},

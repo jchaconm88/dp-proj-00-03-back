@@ -56,6 +56,7 @@ export const Users: CollectionConfig = {
       name: 'role',
       type: 'select',
       required: true,
+      saveToJWT: true,
       options: [
         { label: 'Administrador de Plataforma', value: 'platform_admin' },
         { label: 'Administrador de Tenant', value: 'tenant_admin' },

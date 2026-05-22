@@ -1,5 +1,7 @@
 import type { CollectionConfig, CollectionBeforeChangeHook } from 'payload'
+import { getUserTenantIDs } from '@payloadcms/plugin-multi-tenant/utilities'
 import type { Tenant } from '../types/index.ts'
+import type { User } from '../payload-types.ts'
 
 const MAX_STORAGE_BYTES = 5 * 1024 * 1024 * 1024 // 5 GB
 
@@ -42,9 +44,20 @@ export const Tenants: CollectionConfig = {
     group: 'Plataforma',
   },
   access: {
-    // Solo platform_admin puede gestionar tenants
     create: ({ req }) => req.user?.role === 'platform_admin',
-    read: ({ req }) => req.user?.role === 'platform_admin',
+    read: ({ req }) => {
+      const role = req.user?.role
+      if (role === 'platform_admin') return true
+      if (role === 'tenant_admin') {
+        const ids = getUserTenantIDs(req.user as User, {
+          tenantsArrayFieldName: 'tenants',
+          tenantsArrayTenantFieldName: 'tenant',
+        })
+        if (ids.length === 0) return false
+        return { id: { in: ids } }
+      }
+      return false
+    },
     update: ({ req }) => req.user?.role === 'platform_admin',
     delete: () => false, // No se elimina, solo se desactiva
   },
