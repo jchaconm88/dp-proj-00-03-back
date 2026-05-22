@@ -18,14 +18,16 @@ export async function upsertPublishedVersion(
 
   const contentVersion = Date.now()
 
-  await req.payload.db.execute(sql`
-    INSERT INTO "published_content_versions" ("tenant_id", "collection", "slug", "content_version")
-    VALUES (${tenantId}, ${args.collection}, ${slug}, ${contentVersion})
-    ON CONFLICT ("tenant_id", "collection", "slug")
-    DO UPDATE SET
-      "content_version" = EXCLUDED."content_version",
-      "updated_at" = now();
-  `)
+  await req.payload.db.execute({
+    sql: sql`
+      INSERT INTO "published_content_versions" ("tenant_id", "collection", "slug", "content_version")
+      VALUES (${tenantId}, ${args.collection}, ${slug}, ${contentVersion})
+      ON CONFLICT ("tenant_id", "collection", "slug")
+      DO UPDATE SET
+        "content_version" = EXCLUDED."content_version",
+        "updated_at" = now();
+    `,
+  })
 }
 
 export async function deletePublishedVersion(
@@ -36,10 +38,12 @@ export async function deletePublishedVersion(
   const slug = args.slug?.trim()
   if (tenantId == null || !slug) return
 
-  await req.payload.db.execute(sql`
-    DELETE FROM "published_content_versions"
-    WHERE "tenant_id" = ${tenantId}
-      AND "collection" = ${args.collection}
-      AND "slug" = ${slug};
-  `)
+  await req.payload.db.execute({
+    sql: sql`
+      DELETE FROM "published_content_versions"
+      WHERE "tenant_id" = ${tenantId}
+        AND "collection" = ${args.collection}
+        AND "slug" = ${slug};
+    `,
+  })
 }
