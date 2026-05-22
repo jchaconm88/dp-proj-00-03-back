@@ -3,11 +3,15 @@ import { rejectScheduledIfDisabled } from '../hooks/reject-scheduled-if-disabled
 import { refId } from '../lib/payload-ids.ts'
 import { notifyContentChange } from '../services/webhook.ts'
 import {
+  deletePublishedVersion,
+  upsertPublishedVersion,
+} from '../services/published-content-versions.ts'
+import {
   loadActiveTemplateManifest,
   validatePageTranslationsTemplateData,
 } from '../services/template-data-validation.ts'
 
-const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation }) => {
+const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation, req }) => {
   let event: 'content.created' | 'content.updated' | 'content.published' | 'content.unpublished'
 
   if (operation === 'create') {
@@ -20,9 +24,18 @@ const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation })
     event = 'content.updated'
   }
 
+  const tenantId = refId(doc['tenant'])
+  const slug = String(doc['slug'] ?? '').trim()
+
+  if (doc['status'] === 'published' && slug) {
+    await upsertPublishedVersion(req, { tenantId, collection: 'pages', slug })
+  } else if (event === 'content.unpublished' && slug) {
+    await deletePublishedVersion(req, { tenantId, collection: 'pages', slug })
+  }
+
   await notifyContentChange({
     event,
-    tenantId: refId(doc['tenant']),
+    tenantId,
     collection: 'pages',
     documentId: refId(doc['id']),
     timestamp: new Date().toISOString(),

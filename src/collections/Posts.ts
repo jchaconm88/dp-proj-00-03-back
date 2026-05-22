@@ -2,18 +2,36 @@ import type { CollectionConfig, CollectionAfterChangeHook } from 'payload'
 import { rejectScheduledIfDisabled } from '../hooks/reject-scheduled-if-disabled.ts'
 import { refId } from '../lib/payload-ids.ts'
 import { notifyContentChange } from '../services/webhook.ts'
+import {
+  deletePublishedVersion,
+  upsertPublishedVersion,
+} from '../services/published-content-versions.ts'
 
-const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation }) => {
-  const event =
-    operation === 'create'
-      ? 'content.created'
-      : doc['status'] === 'published'
-        ? 'content.published'
-        : 'content.updated'
+const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation, req }) => {
+  let event: 'content.created' | 'content.updated' | 'content.published' | 'content.unpublished'
+
+  if (operation === 'create') {
+    event = 'content.created'
+  } else if (doc['status'] === 'published') {
+    event = 'content.published'
+  } else if (doc['_previousStatus'] === 'published' && doc['status'] !== 'published') {
+    event = 'content.unpublished'
+  } else {
+    event = 'content.updated'
+  }
+
+  const tenantId = refId(doc['tenant'])
+  const slug = String(doc['slug'] ?? '').trim()
+
+  if (doc['status'] === 'published' && slug) {
+    await upsertPublishedVersion(req, { tenantId, collection: 'posts', slug })
+  } else if (event === 'content.unpublished' && slug) {
+    await deletePublishedVersion(req, { tenantId, collection: 'posts', slug })
+  }
 
   await notifyContentChange({
     event,
-    tenantId: refId(doc['tenant']),
+    tenantId,
     collection: 'posts',
     documentId: refId(doc['id']),
     timestamp: new Date().toISOString(),
