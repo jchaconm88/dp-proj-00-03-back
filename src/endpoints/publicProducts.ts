@@ -1,4 +1,5 @@
 import type { Endpoint } from 'payload'
+import { buildMediaImageFields, type PayloadMediaLike } from '../lib/media-image-props.ts'
 
 export const publicProductsEndpoint: Endpoint = {
   path: '/public/products/:tenantId',
@@ -35,6 +36,8 @@ export const publicProductsEndpoint: Endpoint = {
       (where['and'] as unknown[]).push({ slug: { in: slugList } })
     }
 
+    const publicBaseUrl = process.env['PAYLOAD_PUBLIC_SERVER_URL'] ?? ''
+
     const result = await req.payload.find({
       collection: 'products',
       where: where as never,
@@ -47,12 +50,24 @@ export const publicProductsEndpoint: Endpoint = {
     let products = result.docs.map((doc) => {
       const imageRef = doc['image']
       let imageUrl: string | null = null
-      if (typeof imageRef === 'object' && imageRef !== null && 'url' in imageRef) {
-        const raw = (imageRef as { url?: string }).url
-        if (raw) {
-          imageUrl = raw.startsWith('http')
-            ? raw
-            : `${process.env['PAYLOAD_PUBLIC_SERVER_URL'] ?? ''}${raw}`
+      let imageSrcset: string | undefined
+      let imageSizes: string | undefined
+      let imageWidth: number | undefined
+      let imageHeight: number | undefined
+
+      if (typeof imageRef === 'object' && imageRef !== null) {
+        const fields = buildMediaImageFields(imageRef as PayloadMediaLike, publicBaseUrl)
+        if (fields) {
+          imageUrl = fields.imageUrl
+          imageSrcset = fields.imageSrcset
+          imageSizes = fields.imageSizes
+          imageWidth = fields.imageWidth
+          imageHeight = fields.imageHeight
+        } else if ('url' in imageRef) {
+          const raw = (imageRef as { url?: string }).url
+          if (raw) {
+            imageUrl = raw.startsWith('http') ? raw : `${publicBaseUrl}${raw}`
+          }
         }
       }
 
@@ -68,6 +83,10 @@ export const publicProductsEndpoint: Endpoint = {
         ctaLabel: doc['ctaLabel'] ?? 'Ver producto',
         href: doc['href'] ?? '#',
         imageUrl,
+        imageSrcset,
+        imageSizes,
+        imageWidth,
+        imageHeight,
         sortOrder: doc['sortOrder'] ?? 0,
       }
     })
