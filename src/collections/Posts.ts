@@ -9,19 +9,20 @@ import { refId } from '../lib/payload-ids.ts'
 import { notifyContentChange } from '../services/webhook.ts'
 import {
   deletePublishedVersion,
+  resolveDocTenantId,
   upsertPublishedVersion,
 } from '../services/published-content-versions.ts'
 
 const afterChangeWebhook: CollectionAfterChangeHook = async ({ doc, operation, req }) => {
   const event = resolveContentChangeEvent(operation, doc, getContentPreviousStatus(req))
 
-  const tenantId = refId(doc['tenant'])
+  const tenantId = await resolveDocTenantId(req, 'posts', doc)
   const slug = String(doc['slug'] ?? '').trim()
 
-  if (doc['status'] === 'published' && slug) {
-    await upsertPublishedVersion(req, { tenantId, collection: 'posts', slug })
-  } else if (event === 'content.unpublished' && slug) {
+  if (event === 'content.unpublished' && slug) {
     await deletePublishedVersion(req, { tenantId, collection: 'posts', slug })
+  } else if (doc['status'] === 'published' && slug) {
+    await upsertPublishedVersion(req, { tenantId, collection: 'posts', slug })
   }
 
   await notifyContentChange({
